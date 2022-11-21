@@ -1,0 +1,208 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cards\2C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\2D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\2H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\2S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\3C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\3D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\3H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\3S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\4C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\4D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\4H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\4S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\5C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\5D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\5H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\5S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\6C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\6D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\6H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\6S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\7C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\7D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\7H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\7S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\8C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\8D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\8H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\8S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\9C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\9D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\9H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\9S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\10C.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\10D.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\10H.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\10S.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\AC.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\AD.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\AH.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\AS.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\BLUE_BACK.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\JC.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\JD.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\JH.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\JS.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\KC.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\KD.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\KH.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\KS.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\QC.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\QD.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\QH.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\QS.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\RED_BACK.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\TC.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\TD.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\TH.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="cards\TS.svg">
+      <Filter>リソース ファイル</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FreeCell.rc">
+      <Filter>リソース ファイル</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

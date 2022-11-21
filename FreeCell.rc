@@ -1,0 +1,183 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 (日本) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// SVG
+//
+
+IDR_SVG1                SVG                     "cards\\2C.svg"
+
+IDR_SVG2                SVG                     "cards\\2D.svg"
+
+IDR_SVG3                SVG                     "cards\\2H.svg"
+
+IDR_SVG4                SVG                     "cards\\2S.svg"
+
+IDR_SVG5                SVG                     "cards\\3C.svg"
+
+IDR_SVG6                SVG                     "cards\\3D.svg"
+
+IDR_SVG7                SVG                     "cards\\3H.svg"
+
+IDR_SVG8                SVG                     "cards\\3S.svg"
+
+IDR_SVG9                SVG                     "cards\\4C.svg"
+
+IDR_SVG10               SVG                     "cards\\4D.svg"
+
+IDR_SVG11               SVG                     "cards\\4H.svg"
+
+IDR_SVG12               SVG                     "cards\\4S.svg"
+
+IDR_SVG13               SVG                     "cards\\5C.svg"
+
+IDR_SVG14               SVG                     "cards\\5D.svg"
+
+IDR_SVG15               SVG                     "cards\\5H.svg"
+
+IDR_SVG16               SVG                     "cards\\5S.svg"
+
+IDR_SVG17               SVG                     "cards\\6C.svg"
+
+IDR_SVG18               SVG                     "cards\\6D.svg"
+
+IDR_SVG19               SVG                     "cards\\6H.svg"
+
+IDR_SVG20               SVG                     "cards\\6S.svg"
+
+IDR_SVG21               SVG                     "cards\\7C.svg"
+
+IDR_SVG22               SVG                     "cards\\7D.svg"
+
+IDR_SVG23               SVG                     "cards\\7H.svg"
+
+IDR_SVG24               SVG                     "cards\\7S.svg"
+
+IDR_SVG25               SVG                     "cards\\8C.svg"
+
+IDR_SVG26               SVG                     "cards\\8D.svg"
+
+IDR_SVG27               SVG                     "cards\\8H.svg"
+
+IDR_SVG28               SVG                     "cards\\8S.svg"
+
+IDR_SVG29               SVG                     "cards\\9C.svg"
+
+IDR_SVG30               SVG                     "cards\\9D.svg"
+
+IDR_SVG31               SVG                     "cards\\9H.svg"
+
+IDR_SVG32               SVG                     "cards\\9S.svg"
+
+IDR_SVG33               SVG                     "cards\\10C.svg"
+
+IDR_SVG34               SVG                     "cards\\10D.svg"
+
+IDR_SVG35               SVG                     "cards\\10H.svg"
+
+IDR_SVG36               SVG                     "cards\\10S.svg"
+
+IDR_SVG37               SVG                     "cards\\AC.svg"
+
+IDR_SVG38               SVG                     "cards\\AD.svg"
+
+IDR_SVG39               SVG                     "cards\\AH.svg"
+
+IDR_SVG40               SVG                     "cards\\AS.svg"
+
+IDR_SVG41               SVG                     "cards\\BLUE_BACK.svg"
+
+IDR_SVG42               SVG                     "cards\\JC.svg"
+
+IDR_SVG43               SVG                     "cards\\JD.svg"
+
+IDR_SVG44               SVG                     "cards\\JH.svg"
+
+IDR_SVG45               SVG                     "cards\\JS.svg"
+
+IDR_SVG46               SVG                     "cards\\KC.svg"
+
+IDR_SVG47               SVG                     "cards\\KD.svg"
+
+IDR_SVG48               SVG                     "cards\\KH.svg"
+
+IDR_SVG49               SVG                     "cards\\KS.svg"
+
+IDR_SVG50               SVG                     "cards\\QC.svg"
+
+IDR_SVG51               SVG                     "cards\\QD.svg"
+
+IDR_SVG52               SVG                     "cards\\QH.svg"
+
+IDR_SVG53               SVG                     "cards\\QS.svg"
+
+IDR_SVG54               SVG                     "cards\\RED_BACK.svg"
+
+IDR_SVG55               SVG                     "cards\\TC.svg"
+
+IDR_SVG56               SVG                     "cards\\TD.svg"
+
+IDR_SVG57               SVG                     "cards\\TH.svg"
+
+IDR_SVG58               SVG                     "cards\\TS.svg"
+
+#endif    // 日本語 (日本) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
