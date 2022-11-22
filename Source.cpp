@@ -4,7 +4,10 @@
 #pragma comment(lib,"d2d1")
 #pragma comment(lib,"dxgi")
 
+#include <list>
+
 #include <windows.h>
+#include <windowsx.h>
 #include <wincodec.h>
 #include <shlwapi.h>
 #include <d2d1svg.h>
@@ -36,58 +39,78 @@ inline void SafeRelease(T*& p)
 	}
 }
 
-BOOL CreateSvgDocumentFromResource(
-	_In_opt_ HMODULE hModule,
-	_In_ LPCWSTR lpName,
-	_In_ LPCWSTR lpType,
-	ID2D1DeviceContext6* d2dContext,
-	ID2D1SvgDocument** m_svgDocument)
-{
-	HRSRC hRes = FindResource(hModule, lpName, lpType);
-	if (hRes == NULL)
-	{
-		return FALSE;
-	}
-	HGLOBAL hResLoad = LoadResource(hModule, hRes);
-	if (hResLoad == NULL)
-	{
-		return FALSE;
-	}
-	IStream* pIStream = 0;
-	int nSize = SizeofResource(hModule, hRes);
-	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, nSize);
-	if (!hMem) {
-		return FALSE;
-	} else {
-		LPVOID ptr = GlobalLock(hMem);
-		if (ptr) {
-			memcpy(ptr, LockResource(hResLoad), nSize);
-			GlobalUnlock(hMem);
-			HRESULT hr = CreateStreamOnHGlobal(hMem, TRUE, &pIStream);
-			if (SUCCEEDED(hr)) {
-				d2dContext->CreateSvgDocument(
-					pIStream,
-					D2D1::SizeF(50, 50), // Create the document at a size of 500x500 DIPs.
-					m_svgDocument
-				);
-				return TRUE;
-			}
-		}
-	}
-	return FALSE;
-}
-
 class card {
+public:
+	~card() {
+		SafeRelease(m_svgDocument);
+	}
 	ID2D1SvgDocument* m_svgDocument;
+	BOOL bVisible = TRUE;
 	float x = 0;
 	float y = 0;
+	float width = 224.22508f;
+	float height = 312.80777f;
+	float scale = 0.5f;
 	void Draw(ID2D1DeviceContext6* d2dDeviceContext) {
 		if (!d2dDeviceContext) return;
 		if (!m_svgDocument) return;
+		if (!bVisible) return;
 		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
+		transform = transform * D2D1::Matrix3x2F::Scale(scale, scale);
 		transform = transform * D2D1::Matrix3x2F::Translation(x, y);
 		d2dDeviceContext->SetTransform(transform);
 		d2dDeviceContext->DrawSvgDocument(m_svgDocument);
+	}
+	BOOL CreateSvgDocumentFromResource(_In_opt_ HMODULE hModule,
+		_In_ LPCWSTR lpName,
+		_In_ LPCWSTR lpType,
+		ID2D1DeviceContext6* d2dContext) {
+		HRSRC hRes = FindResource(hModule, lpName, lpType);
+		if (hRes == NULL)
+		{
+			return FALSE;
+		}
+		HGLOBAL hResLoad = LoadResource(hModule, hRes);
+		if (hResLoad == NULL)
+		{
+			return FALSE;
+		}
+		IStream* pIStream = 0;
+		int nSize = SizeofResource(hModule, hRes);
+		HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, nSize);
+		if (!hMem) {
+			return FALSE;
+		}
+		LPVOID ptr = GlobalLock(hMem);
+		if (!ptr) {
+			return FALSE;
+		}
+		memcpy(ptr, LockResource(hResLoad), nSize);
+		GlobalUnlock(hMem);
+		if (FAILED(CreateStreamOnHGlobal(hMem, TRUE, &pIStream))) {
+			return FALSE;
+		}
+		if (FAILED(d2dContext->CreateSvgDocument(
+			pIStream,
+			D2D1::SizeF(width, height), // Create the document at a size of 500x500 DIPs.
+			&m_svgDocument
+		))) {
+			return FALSE;
+		}
+		return TRUE;
+	}
+	BOOL HitTest(int _x, int _y) {
+		if (
+			bVisible &&
+			_x >= x &&
+			_x <= x + scale * width &&
+			_y >= y &&
+			_y <= y + scale * height
+			)
+		{
+			return TRUE;
+		}
+		return FALSE;
 	}
 };
 
@@ -102,9 +125,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static IDXGISurface* dxgiBackBufferSurface = NULL; // Back buffer 
 	static ID2D1Bitmap1* bmpTarget = NULL;
 	static ID2D1SolidColorBrush* shapeBr = NULL;
-	static ID2D1SvgDocument* m_svgDocument[13 * 4] = {};
+	static std::list<card*> pcard;
+	static card* pdragcard = 0;
+	static float offset_x = 0;
+	static float offset_y = 0;
 	switch (msg)
 	{
+	case WM_LBUTTONDOWN:
+		{
+			pdragcard = 0;
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
+			for (auto it = pcard.rbegin(), end = pcard.rend(); it != end; ++it) {
+				if ((*it)->HitTest(x, y)) {
+					card* p = *it;					
+					pcard.erase((++it).base());
+					pcard.push_back(p);
+					pdragcard = p;
+					offset_x = x - p->x;
+					offset_y = y - p->y;
+					SetCapture(hWnd);
+					break;
+				}
+			}
+		}
+		break;
+	case WM_MOUSEMOVE:
+		if (pdragcard) {
+			pdragcard->x = GET_X_LPARAM(lParam) - offset_x;
+			pdragcard->y = GET_Y_LPARAM(lParam) - offset_y;
+			InvalidateRect(hWnd, 0, 0);
+		}
+		break;
+	case WM_LBUTTONUP:
+		if (pdragcard) {
+			ReleaseCapture();
+			pdragcard = 0;
+			offset_x = 0.0f;
+			offset_y = 0.0f;			
+		}
+		break;
 	case WM_CREATE:
 	{
 		HRESULT hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT, featureLevels
@@ -153,8 +213,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			d2dDeviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_ALIASED);
 		}
 		if (SUCCEEDED(hr)) {
-			CreateSvgDocumentFromResource(GetModuleHandle(0), MAKEINTRESOURCE(IDR_SVG1), L"SVG", d2dDeviceContext, &m_svgDocument[0]);
-			CreateSvgDocumentFromResource(GetModuleHandle(0), MAKEINTRESOURCE(IDR_SVG2), L"SVG", d2dDeviceContext, &m_svgDocument[1]);
+			const int ids[]={
+				IDR_SVG1,IDR_SVG2,IDR_SVG3,IDR_SVG4,IDR_SVG5,IDR_SVG6,IDR_SVG7,IDR_SVG8,IDR_SVG9,IDR_SVG10,IDR_SVG11,IDR_SVG12,IDR_SVG13,
+				IDR_SVG14,IDR_SVG15,IDR_SVG16,IDR_SVG17,IDR_SVG18,IDR_SVG19,IDR_SVG20,IDR_SVG21,IDR_SVG22,IDR_SVG23,IDR_SVG24,IDR_SVG25,IDR_SVG26,
+				IDR_SVG27,IDR_SVG28,IDR_SVG29,IDR_SVG30,IDR_SVG31,IDR_SVG32,IDR_SVG33,IDR_SVG34,IDR_SVG35,IDR_SVG36,IDR_SVG37,IDR_SVG38,IDR_SVG39,
+				IDR_SVG40,IDR_SVG41,IDR_SVG42,IDR_SVG43,IDR_SVG44,IDR_SVG45,IDR_SVG46,IDR_SVG47,IDR_SVG48,IDR_SVG49,IDR_SVG50,IDR_SVG51,IDR_SVG52,
+				IDR_SVG53,IDR_SVG54,IDR_SVG55,IDR_SVG56,IDR_SVG57,IDR_SVG58,
+				};
+			for (int i = 0; i < 58; i++) {
+				card* p = new card;
+				p->x = i * 20.0f;
+				p->y = i * 20.0f;
+				p->CreateSvgDocumentFromResource(GetModuleHandle(0), MAKEINTRESOURCE(ids[i]), L"SVG", d2dDeviceContext);
+				pcard.push_back(p);
+			}
 		}
 		break;
 	}
@@ -171,21 +243,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			//d2dDeviceContext->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(300.0f, 300.0f), 10.0f, 10.0f), shapeBr);
 			D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
 			d2dDeviceContext->SetTransform(transform);
-			transform = transform * D2D1::Matrix3x2F::Translation(
-				100.0f,
-				100.0f
-			);
-			d2dDeviceContext->SetTransform(transform);
-			if (m_svgDocument[0]) {
-				d2dDeviceContext->DrawSvgDocument(m_svgDocument[0]);
-			}
-			transform = transform * D2D1::Matrix3x2F::Translation(
-				200.0f,
-				200.0f
-			);
-			d2dDeviceContext->SetTransform(transform);
-			if (m_svgDocument[1]) {
-				d2dDeviceContext->DrawSvgDocument(m_svgDocument[1]);
+			for(auto& i : pcard) {
+				i->Draw(d2dDeviceContext);
 			}
 			d2dDeviceContext->EndDraw();
 			dxgiSwapChain->Present(1, 0);
@@ -203,8 +262,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		SafeRelease(d2dDeviceContext);
 		SafeRelease(bmpTarget);
 		SafeRelease(shapeBr);
-		SafeRelease(m_svgDocument[0]);
-		SafeRelease(m_svgDocument[1]);
+		for (auto& i : pcard) {
+			delete i;
+			i = 0;
+		}
 		PostQuitMessage(0);
 		break;
 	default:
