@@ -3,8 +3,12 @@
 #pragma comment(lib,"d3d11")
 #pragma comment(lib,"d2d1")
 #pragma comment(lib,"dxgi")
+#pragma comment(lib,"dxguid")
 
 #include <list>
+#include <vector>
+#include <random>
+#include <algorithm>
 
 #include <windows.h>
 #include <windowsx.h>
@@ -16,6 +20,17 @@
 #include <d3d11_1.h>
 #include <dxgi1_6.h>
 #include "resource.h"
+
+#define CLIENT_WIDTH (960)
+#define CLIENT_HEIGHT (600)
+
+#define CARD_WIDTH (224.22508f)
+#define CARD_HEIGHT (312.80777f)
+#define CARD_SCALE (0.5f)
+#define CARD_OFFSET (30.0f) /* カードが重なるときのオフセット */
+#define BOARD_OFFSET (10.0f) /* カード同士の隙間の余白 */
+
+#define NOT_FOUND (-1)
 
 TCHAR szClassName[] = TEXT("FreeCell");
 
@@ -45,16 +60,30 @@ public:
 		SafeRelease(m_svgDocument);
 	}
 	ID2D1SvgDocument* m_svgDocument;
+	int no;
 	BOOL bVisible = TRUE;
+	BOOL bSelected = FALSE;
+	BOOL bCanDrag = FALSE;
+	BOOL bDrag = FALSE; // ドラッグ中はtrue
 	float x = 0;
 	float y = 0;
-	float width = 224.22508f;
-	float height = 312.80777f;
-	float scale = 0.5f;
-	void Draw(ID2D1DeviceContext6* d2dDeviceContext) {
+	float width = CARD_WIDTH;
+	float height = CARD_HEIGHT;
+	float scale = CARD_SCALE;
+	float offset_x = 0;
+	float offset_y = 0;
+	void Draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1Brush * brush) {
 		if (!d2dDeviceContext) return;
-		if (!m_svgDocument) return;
 		if (!bVisible) return;
+		if (bSelected) {
+			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			D2D1_RECT_F rect;
+			rect.left = x;
+			rect.top = y;
+			rect.right = x + scale * width;
+			rect.bottom = y + scale * height;
+			d2dDeviceContext->DrawRectangle(rect, brush, 10.0f);
+		}
 		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
 		transform = transform * D2D1::Matrix3x2F::Scale(scale, scale);
 		transform = transform * D2D1::Matrix3x2F::Translation(x, y);
@@ -112,6 +141,224 @@ public:
 		}
 		return FALSE;
 	}
+	BOOL CanDrag() {
+		if (bVisible && bCanDrag) {
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+
+class game {
+public:
+	ID2D1SolidColorBrush* selectBrush = NULL;
+	ID2D1SolidColorBrush* emptyBrush = NULL;
+	std::list<card*> pcard;
+	std::vector<card*> dragcard;
+	card* freecell[4] = {};
+	card* homecell[4] = {};
+	std::vector<card*> board[8];
+	int old_board_no = -1;
+	game(ID2D1DeviceContext6* d2dDeviceContext) {
+		HRESULT hr = S_OK;
+		if (SUCCEEDED(hr)) {
+			hr = d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(1.0F, 1.0F, 1.0F, 0.5F), &selectBrush);
+		}
+		if (SUCCEEDED(hr)) {
+			hr = d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.0F, 0.0F, 0.0F, 0.5F), &emptyBrush);
+		}
+		if (SUCCEEDED(hr)) {
+			const int ids[] = {
+				IDR_SVG101,IDR_SVG102,IDR_SVG103,IDR_SVG104,IDR_SVG105,IDR_SVG106,IDR_SVG107,IDR_SVG108,IDR_SVG109,IDR_SVG110,IDR_SVG111,IDR_SVG112,IDR_SVG113,
+				IDR_SVG201,IDR_SVG202,IDR_SVG203,IDR_SVG204,IDR_SVG205,IDR_SVG206,IDR_SVG207,IDR_SVG208,IDR_SVG209,IDR_SVG210,IDR_SVG211,IDR_SVG212,IDR_SVG213,
+				IDR_SVG301,IDR_SVG302,IDR_SVG303,IDR_SVG304,IDR_SVG305,IDR_SVG306,IDR_SVG307,IDR_SVG308,IDR_SVG309,IDR_SVG310,IDR_SVG311,IDR_SVG312,IDR_SVG313,
+				IDR_SVG401,IDR_SVG402,IDR_SVG403,IDR_SVG404,IDR_SVG405,IDR_SVG406,IDR_SVG407,IDR_SVG408,IDR_SVG409,IDR_SVG410,IDR_SVG411,IDR_SVG412,IDR_SVG413,
+			};
+			for (int i = 0; i < _countof(ids); i++) {
+				card* p = new card;
+				p->no = ids[i];
+				p->CreateSvgDocumentFromResource(GetModuleHandle(0), MAKEINTRESOURCE(ids[i]), L"SVG", d2dDeviceContext);
+				pcard.push_back(p);
+			}
+		}
+	}
+	~game() {
+		for (auto& i : pcard) {
+			delete i;
+			i = 0;
+		}
+		SafeRelease(selectBrush);
+		SafeRelease(emptyBrush);
+	}
+	void start() {
+		UnSelectAll();
+		UnDragAll();
+		for (auto& i : freecell) {
+			i = 0;
+		};
+		for (auto& i : homecell) {
+			i = 0;
+		};
+		for (auto& i : board) {
+			i.clear();
+		};
+		old_board_no = -1;
+		{
+			// シャッフル
+			std::vector<card*> temp(pcard.begin(), pcard.end());
+			std::random_device rd;
+			std::mt19937 generator(rd());
+			std::shuffle(temp.begin(), temp.end(), generator);
+			int count[] = { 7, 7, 7, 7, 6, 6, 6, 6 };
+			int board_index = 0;
+			int card_index = 0;
+			float width = CARD_WIDTH;
+			float height = CARD_HEIGHT;
+			float scale = CARD_SCALE;
+			for (auto c : count) {
+				for (int i = 0; i < c; i++) {
+					temp[card_index]->x = CLIENT_WIDTH / 8.0f * board_index;
+					temp[card_index]->y = i * CARD_OFFSET + scale * height + 2.0f * BOARD_OFFSET;
+					board[board_index].push_back(temp[card_index]);
+					card_index++;
+				}
+				board_index++;
+			}
+			std::copy(temp.begin(), temp.end(), pcard.begin());
+			SetCanDragCard();
+		}
+	}
+	void UnSelectAll() {
+		for (auto& i : pcard) {
+			i->bSelected = FALSE;
+		}
+	}
+	void UnDragAll() {
+		for (auto& i : pcard) {
+			i->bDrag = FALSE;
+			i->offset_x = 0.0f;
+			i->offset_y = 0.0f;
+		}
+		dragcard.clear();
+		old_board_no = -1;
+	}
+	void SetCanDragCard() {
+		for (auto& i : pcard) {
+			i->bCanDrag = FALSE;
+		}
+		for (auto& i : freecell) {
+			if (i) {
+				i->bCanDrag = TRUE;
+			}
+		}
+		for (auto& i : pcard) {
+			if (i) {
+				i->bCanDrag = TRUE;
+			}
+		}
+		for (auto& m : board) {
+			bool first = true;
+			bool second = false;
+			int prev = 0;
+			for (auto i = m.rbegin(), e = m.rend(); i != e; ++i) {
+				if (first) {
+					first = false;
+					second = true;
+					(*i)->bCanDrag = TRUE;
+					prev = (*i)->no;
+					continue;
+				}
+				if (second) {
+					if (prev % 100 + 1 == (*i)->no % 100 && (prev / 100 + (*i)->no / 100) % 2 == 1) {
+						(*i)->bCanDrag = TRUE;
+						prev = (*i)->no;
+					}
+					else {
+						break;
+					}
+				}
+			}
+		}
+	}
+	BOOL CanDrop(int card_no, int board_no) {
+		if (board_no < 0 || board_no > 7) return FALSE;
+		if (board[board_no].size() == 0) {
+			if (card_no % 100 == 13) {
+				return TRUE;
+			}
+			else {
+				return FALSE;
+			}
+		}
+		else {
+			card * p = board[board_no].back();
+			int back = p->no;
+			if (card_no % 100 + 1 == back % 100 && (card_no / 100 + back / 100) % 2 == 1) {
+				return TRUE;
+			}
+			else {
+				return FALSE;
+			}
+		}
+	}
+	void DrawBoard(ID2D1DeviceContext6* d2dDeviceContext) {
+		for (int i = 0; i < 8; i++)
+		{
+			D2D1_RECT_F rect;
+			float x = CLIENT_WIDTH / 8.0f * i;
+			float y = BOARD_OFFSET;
+			rect.left = x;
+			rect.top = y;
+			rect.right = x + CARD_SCALE * CARD_WIDTH;
+			rect.bottom = y + CARD_SCALE * CARD_HEIGHT;
+			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			d2dDeviceContext->FillRectangle(rect, emptyBrush);
+			if (i < 4) {
+				if (freecell[i]) {
+					freecell[i]->Draw(d2dDeviceContext, selectBrush);
+				}
+			}
+			else {
+				if (homecell[i - 4]) {
+					homecell[i - 4]->Draw(d2dDeviceContext, selectBrush);
+				}
+			}
+		}
+		for (auto& m : board) {
+			for (auto ii = m.begin(), e = m.end(); ii != e; ++ii) {
+				if (!(*ii)->bDrag) {
+					(*ii)->Draw(d2dDeviceContext, selectBrush);
+				}
+			}
+		}
+		for (auto& i : dragcard) {
+			i->Draw(d2dDeviceContext, selectBrush);
+		}
+	}
+	int CanHome(int card_no) {
+		int index = 0;
+		for (auto i : homecell) {
+			if (i) {
+				if ((i->no / 100 == card_no / 100) && (i->no % 100 + 1 == card_no % 100)) {
+					return index;
+				}
+			} else if (card_no % 100 == 1) {				
+				return index;
+			}
+			index++;
+		}
+		return NOT_FOUND;
+	}
+	int CanFreeCell(int card_no) {
+		int index = 0;
+		for (auto i : freecell) {
+			if (i == 0) {
+				return index;
+			}
+			index++;
+		}
+		return NOT_FOUND;
+	}
 };
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -122,47 +369,224 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static ID2D1DeviceContext6* d2dDeviceContext = NULL;
 	static IDXGIFactory2* dxgiFactory = NULL;
 	static IDXGISwapChain1* dxgiSwapChain = NULL;
-	static IDXGISurface* dxgiBackBufferSurface = NULL; // Back buffer 
+	static IDXGISurface* dxgiBackBufferSurface = NULL;
 	static ID2D1Bitmap1* bmpTarget = NULL;
-	static ID2D1SolidColorBrush* shapeBr = NULL;
-	static std::list<card*> pcard;
-	static card* pdragcard = 0;
-	static float offset_x = 0;
-	static float offset_y = 0;
+	static game* g;
 	switch (msg)
 	{
-	case WM_LBUTTONDOWN:
-		{
-			pdragcard = 0;
-			int x = GET_X_LPARAM(lParam);
-			int y = GET_Y_LPARAM(lParam);
-			for (auto it = pcard.rbegin(), end = pcard.rend(); it != end; ++it) {
-				if ((*it)->HitTest(x, y)) {
-					card* p = *it;					
-					pcard.erase((++it).base());
-					pcard.push_back(p);
-					pdragcard = p;
-					offset_x = x - p->x;
-					offset_y = y - p->y;
-					SetCapture(hWnd);
-					break;
+	case WM_LBUTTONDBLCLK:
+	{
+		g->UnSelectAll();
+		g->UnDragAll();
+		int x = GET_X_LPARAM(lParam);
+		int y = GET_Y_LPARAM(lParam);
+		int board_no = x / (CLIENT_WIDTH / 8);
+		if (g->board[board_no].size() > 0) {
+			card* p = g->board[board_no].back();
+			int home_no = g->CanHome(p->no);
+			if (home_no != NOT_FOUND) {
+				if (g->homecell[home_no]) {
+					g->homecell[home_no]->bVisible = FALSE; // すでにあるものは非表示にする
+				}
+				p->x = CLIENT_WIDTH / 8.0f * (4 + home_no);
+				p->y = BOARD_OFFSET;
+				p->bCanDrag = FALSE;
+				p->bDrag = FALSE;
+				p->bSelected = FALSE;
+				g->homecell[home_no] = p;
+				g->board[board_no].pop_back();
+				g->SetCanDragCard();
+				InvalidateRect(hWnd, 0, 0);
+			}
+			else {
+				int freecell_no = g->CanFreeCell(p->no);
+				if (freecell_no != NOT_FOUND) {
+					p->x = CLIENT_WIDTH / 8.0f * freecell_no;
+					p->y = BOARD_OFFSET;
+					p->bCanDrag = TRUE;
+					p->bDrag = FALSE;
+					p->bSelected = FALSE;
+					g->freecell[freecell_no] = p;
+					g->board[board_no].pop_back();
+					g->SetCanDragCard();
+					InvalidateRect(hWnd, 0, 0);
 				}
 			}
 		}
 		break;
+	}
+	case WM_SIZE:
+		break;
+	case WM_LBUTTONDOWN:
+		{
+			g->UnSelectAll();
+			g->UnDragAll();
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
+			int board_no = x / (CLIENT_WIDTH / 8);
+			if (y < CARD_SCALE * CARD_HEIGHT + BOARD_OFFSET * 1.5f) {
+				for (auto i : g->freecell) {
+					if (i && i->HitTest(x, y) && i->CanDrag()) {
+						i->bDrag = TRUE;
+						g->dragcard.push_back(i);
+						break;
+					}
+				}
+				if (g->dragcard.size() == 0) {
+					for (auto i : g->homecell) {
+						if (i && i->HitTest(x, y) && i->CanDrag()) {
+							i->bDrag = TRUE;
+							g->dragcard.push_back(i);
+							break;
+						}
+					}
+				}
+			}
+			else {
+				for (auto it = g->board[board_no].rbegin(), end = g->board[board_no].rend(); it != end; ++it) {
+					if ((*it)->HitTest(x, y) && (*it)->CanDrag()) {
+						g->dragcard.push_back(*it);
+						break;
+					}
+				}
+				if (g->dragcard.size() > 0) {
+					bool first = false;
+					for (auto it = g->board[board_no].begin(), end = g->board[board_no].end(); it != end; ++it) {
+						if (first) {
+							g->dragcard.push_back(*it);
+						}
+						if (*it == g->dragcard[0]) {
+							first = true;
+						}
+					}
+					for (auto it = g->dragcard.begin(), end = g->dragcard.end(); it != end; ++it) {
+						card* p = *it;
+						p->bSelected = TRUE;
+						p->bDrag = TRUE;
+						p->offset_x = x - p->x;
+						p->offset_y = y - p->y;
+					}
+					g->old_board_no = board_no;
+					SetCapture(hWnd);
+				}
+			}
+			InvalidateRect(hWnd, 0, 0);
+		}
+		break;
 	case WM_MOUSEMOVE:
-		if (pdragcard) {
-			pdragcard->x = GET_X_LPARAM(lParam) - offset_x;
-			pdragcard->y = GET_Y_LPARAM(lParam) - offset_y;
+		if (g->dragcard.size() > 0) {
+			for (auto& i : g->dragcard) {
+				i->x = GET_X_LPARAM(lParam) - i->offset_x;
+				i->y = GET_Y_LPARAM(lParam) - i->offset_y;
+			}
 			InvalidateRect(hWnd, 0, 0);
 		}
 		break;
 	case WM_LBUTTONUP:
-		if (pdragcard) {
+		if (g->dragcard.size() > 0) {
 			ReleaseCapture();
-			pdragcard = 0;
-			offset_x = 0.0f;
-			offset_y = 0.0f;			
+			BOOL bCanDrop = FALSE;
+			card* p0 = g->dragcard[0];
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
+			int card_no = p0->no;
+			int board_no = x / (CLIENT_WIDTH / 8);
+			if (y < CARD_SCALE * CARD_HEIGHT + BOARD_OFFSET * 1.5f) {
+				if (g->dragcard.size() == 1) {
+					if (board_no < 4) {
+						if (!g->freecell[board_no]) {
+							bCanDrop = TRUE;
+							p0->x = CLIENT_WIDTH / 8.0f * board_no;
+							p0->y = BOARD_OFFSET;
+							g->freecell[board_no] = p0;
+							if (g->old_board_no == -1) {
+								// TODO: ヘッダーのドラッグ元を削除する処理を書く
+							}
+							else {
+								g->board[g->old_board_no].pop_back();
+							}
+						}
+						else {
+							const card* p1 = g->homecell[board_no - 4];
+							if ((!p1 && card_no % 100 == 1) || 
+							(p1 && (p1->no /100 == p0->no / 100) && (p1->no%100 +1 == p0->no % 100) )) {
+								bCanDrop = TRUE;
+								p0->x = CLIENT_WIDTH / 8.0f * board_no;
+								p0->y = BOARD_OFFSET;
+								g->homecell[board_no - 4] = p0;
+								if (g->old_board_no == -1) {
+									// TODO: ヘッダーのドラッグ元を削除する処理を書く
+								}
+								else {
+									g->board[g->old_board_no].pop_back();
+								}
+							}
+						}
+					}
+				}
+				//for (auto i : g->freecell) {
+				//	if (i && i->HitTest(x, y) && i->CanDrag()) {
+				//		i->bDrag = TRUE;
+				//		g->dragcard.push_back(i);
+				//		break;
+				//	}
+				//}
+				//if (g->dragcard.size() == 0) {
+				//	for (auto i : g->homecell) {
+				//		if (i && i->HitTest(x, y) && i->CanDrag()) {
+				//			i->bDrag = TRUE;
+				//			g->dragcard.push_back(i);
+				//			break;
+				//		}
+				//	}
+				//}
+			}
+			else {
+				if (board_no != g->old_board_no && g->CanDrop(card_no, board_no)) {
+					bCanDrop = TRUE;
+					const card* last = g->board[board_no].back();
+					for (auto p : g->dragcard) {
+						p->x = last->x;
+						p->y = last->y + 30.0f;
+						g->board[board_no].push_back(p);
+					}
+					//元の列から要素消す
+					if (g->old_board_no != -1) {
+						g->board[g->old_board_no].resize(g->board[g->old_board_no].size() - g->dragcard.size());
+					}
+					g->UnSelectAll();
+					g->SetCanDragCard();
+				}
+			}
+			if (bCanDrop == FALSE) {
+				// もどす
+				int i = 0;
+				if (g->old_board_no == -1) {
+					for (auto p : g->freecell) {
+						if (p) {
+							p->x = CLIENT_WIDTH / 8.0f * i;
+							p->y = BOARD_OFFSET;
+						}
+						i++;
+					}
+					for (auto p : g->homecell) {
+						if (p) {
+							p->x = CLIENT_WIDTH / 8.0f * i;
+							p->y = BOARD_OFFSET;
+						}
+						i++;
+					}
+				}
+				else {
+					for (auto p : g->board[g->old_board_no]) {
+						p->x = CLIENT_WIDTH / 8.0f * g->old_board_no;
+						p->y = i * CARD_OFFSET + CARD_SCALE * CARD_HEIGHT + 20.0f;
+						i++;
+					}
+				}
+			}
+			g->UnDragAll();
+			InvalidateRect(hWnd, 0, 0);
 		}
 		break;
 	case WM_CREATE:
@@ -172,19 +596,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (SUCCEEDED(hr)) {
 			hr = d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
 		}
-		DXGI_SWAP_CHAIN_DESC1 dscd;
+		DXGI_SWAP_CHAIN_DESC1 dscd = {};
 		dscd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 		dscd.BufferCount = 2;
 		dscd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		dscd.Flags = 0;
 		dscd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		dscd.Height = 480;
+		dscd.Height = CLIENT_HEIGHT;
 		dscd.SampleDesc.Count = 1;
 		dscd.SampleDesc.Quality = 0;
 		dscd.Scaling = DXGI_SCALING_NONE;
 		dscd.Stereo = FALSE;
 		dscd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-		dscd.Width = 640;
+		dscd.Width = CLIENT_WIDTH;
 		if (SUCCEEDED(hr)) {
 			hr = D2D1CreateDevice(dxgiDevice, D2D1::CreationProperties(D2D1_THREADING_MODE_SINGLE_THREADED, D2D1_DEBUG_LEVEL_NONE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE), (ID2D1Device**)&d2dDevice);
 		}
@@ -205,29 +629,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		if (SUCCEEDED(hr)) {
 			d2dDeviceContext->SetTarget(bmpTarget);
-			hr = d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &shapeBr);
+			hr = S_OK;
 		}
 		if (SUCCEEDED(hr)) {
 			d2dDeviceContext->SetUnitMode(D2D1_UNIT_MODE_PIXELS);
 			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 			d2dDeviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_ALIASED);
 		}
-		if (SUCCEEDED(hr)) {
-			const int ids[]={
-				IDR_SVG1,IDR_SVG2,IDR_SVG3,IDR_SVG4,IDR_SVG5,IDR_SVG6,IDR_SVG7,IDR_SVG8,IDR_SVG9,IDR_SVG10,IDR_SVG11,IDR_SVG12,IDR_SVG13,
-				IDR_SVG14,IDR_SVG15,IDR_SVG16,IDR_SVG17,IDR_SVG18,IDR_SVG19,IDR_SVG20,IDR_SVG21,IDR_SVG22,IDR_SVG23,IDR_SVG24,IDR_SVG25,IDR_SVG26,
-				IDR_SVG27,IDR_SVG28,IDR_SVG29,IDR_SVG30,IDR_SVG31,IDR_SVG32,IDR_SVG33,IDR_SVG34,IDR_SVG35,IDR_SVG36,IDR_SVG37,IDR_SVG38,IDR_SVG39,
-				IDR_SVG40,IDR_SVG41,IDR_SVG42,IDR_SVG43,IDR_SVG44,IDR_SVG45,IDR_SVG46,IDR_SVG47,IDR_SVG48,IDR_SVG49,IDR_SVG50,IDR_SVG51,IDR_SVG52,
-				IDR_SVG53,IDR_SVG54,IDR_SVG55,IDR_SVG56,IDR_SVG57,IDR_SVG58,
-				};
-			for (int i = 0; i < 58; i++) {
-				card* p = new card;
-				p->x = i * 20.0f;
-				p->y = i * 20.0f;
-				p->CreateSvgDocumentFromResource(GetModuleHandle(0), MAKEINTRESOURCE(ids[i]), L"SVG", d2dDeviceContext);
-				pcard.push_back(p);
-			}
-		}
+		g = new game(d2dDeviceContext);
+		if (!g) return -1;
+		g->start();
 		break;
 	}
 	case WM_PAINT:
@@ -238,19 +649,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			d2dDeviceContext->BeginDraw();
 			d2dDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::ForestGreen));
-			//d2dDeviceContext->DrawLine(D2D1::Point2F(400, 0), D2D1::Point2F(400, 400), shapeBr);
-			//d2dDeviceContext->DrawLine(D2D1::Point2F(200.0f, 320.0f), D2D1::Point2F(400.0f, 320.0f), shapeBr);
-			//d2dDeviceContext->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(300.0f, 300.0f), 10.0f, 10.0f), shapeBr);
-			D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
-			d2dDeviceContext->SetTransform(transform);
-			for(auto& i : pcard) {
-				i->Draw(d2dDeviceContext);
-			}
+			g->DrawBoard(d2dDeviceContext);
 			d2dDeviceContext->EndDraw();
 			dxgiSwapChain->Present(1, 0);
 			EndPaint(hWnd, &ps);
 		}
-		return SUCCEEDED(hr) ? 0 : 1;
+		break;
 	}
 	case WM_DESTROY:
 		SafeRelease(d3dDevice);
@@ -261,11 +665,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		SafeRelease(d2dDevice);
 		SafeRelease(d2dDeviceContext);
 		SafeRelease(bmpTarget);
-		SafeRelease(shapeBr);
-		for (auto& i : pcard) {
-			delete i;
-			i = 0;
-		}
+		delete g;
 		PostQuitMessage(0);
 		break;
 	default:
@@ -280,7 +680,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	MSG msg;
 	WNDCLASS wndclass = {
-		CS_HREDRAW | CS_VREDRAW,
+		CS_DBLCLKS,
 		WndProc,
 		0,
 		0,
@@ -292,14 +692,17 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		szClassName
 	};
 	RegisterClass(&wndclass);
+	RECT rect = {0, 0, CLIENT_WIDTH, CLIENT_HEIGHT};
+	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	AdjustWindowRect(&rect, dwStyle, FALSE);
 	HWND hWnd = CreateWindow(
 		szClassName,
 		TEXT("FreeCell"),
-		WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+		dwStyle,
 		CW_USEDEFAULT,
 		0,
-		CW_USEDEFAULT,
-		0,
+		rect.right - rect.left,
+		rect.bottom - rect.top,
 		0,
 		0,
 		hInstance,
