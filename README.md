@@ -28,3 +28,11 @@
 - ソリティアのように、赤と黒のカードを交互に並べながら、組札に「A」から「K」までのカードを並べていきます。
 
 - すべてのマークを並べるとゲーム クリアです。
+
+## カード絵柄について
+
+Vectorized Playing Cards 1.3- http://code.google.com/p/vectorized-playing-cards/
+
+Copyright 2011 - Chris Aguilar
+
+Licensed under LGPL 3 - www.gnu.org/copyleft/lesser.html
