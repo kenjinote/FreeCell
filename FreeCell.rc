@@ -50,61 +50,109 @@ END
 // SVG
 //
 
-IDR_SVG101               SVG                     "cards\\1S.svg"
-IDR_SVG102               SVG                     "cards\\2S.svg"
-IDR_SVG103               SVG                     "cards\\3S.svg"
-IDR_SVG104               SVG                     "cards\\4S.svg"
-IDR_SVG105               SVG                     "cards\\5S.svg"
-IDR_SVG106               SVG                     "cards\\6S.svg"
-IDR_SVG107               SVG                     "cards\\7S.svg"
-IDR_SVG108               SVG                     "cards\\8S.svg"
-IDR_SVG109               SVG                     "cards\\9S.svg"
-IDR_SVG110               SVG                     "cards\\10S.svg"
-IDR_SVG111               SVG                     "cards\\11S.svg"
-IDR_SVG112               SVG                     "cards\\12S.svg"
-IDR_SVG113               SVG                     "cards\\13S.svg"
+IDR_SVG101              SVG                     "cards\\1S.svg"
 
-IDR_SVG201               SVG                     "cards\\1H.svg"
-IDR_SVG202               SVG                     "cards\\2H.svg"
-IDR_SVG203               SVG                     "cards\\3H.svg"
-IDR_SVG204               SVG                     "cards\\4H.svg"
-IDR_SVG205               SVG                     "cards\\5H.svg"
-IDR_SVG206               SVG                     "cards\\6H.svg"
-IDR_SVG207               SVG                     "cards\\7H.svg"
-IDR_SVG208               SVG                     "cards\\8H.svg"
-IDR_SVG209               SVG                     "cards\\9H.svg"
-IDR_SVG210               SVG                     "cards\\10H.svg"
-IDR_SVG211               SVG                     "cards\\11H.svg"
-IDR_SVG212               SVG                     "cards\\12H.svg"
-IDR_SVG213               SVG                     "cards\\13H.svg"
+IDR_SVG102              SVG                     "cards\\2S.svg"
 
-IDR_SVG301               SVG                    "cards\\1C.svg" 
-IDR_SVG302               SVG                    "cards\\2C.svg"
-IDR_SVG303               SVG                    "cards\\3C.svg"
-IDR_SVG304               SVG                    "cards\\4C.svg"
-IDR_SVG305               SVG                    "cards\\5C.svg"
-IDR_SVG306               SVG                    "cards\\6C.svg"
-IDR_SVG307               SVG                    "cards\\7C.svg"
-IDR_SVG308               SVG                    "cards\\8C.svg"
-IDR_SVG309               SVG                    "cards\\9C.svg"
-IDR_SVG310               SVG                    "cards\\10C.svg"
-IDR_SVG311               SVG                    "cards\\11C.svg"
-IDR_SVG312               SVG                    "cards\\12C.svg"
-IDR_SVG313               SVG                    "cards\\13C.svg"
+IDR_SVG103              SVG                     "cards\\3S.svg"
 
-IDR_SVG401               SVG                    "cards\\1D.svg"
-IDR_SVG402               SVG                    "cards\\2D.svg"
-IDR_SVG403               SVG                    "cards\\3D.svg"
-IDR_SVG404               SVG                    "cards\\4D.svg"
-IDR_SVG405               SVG                    "cards\\5D.svg"
-IDR_SVG406               SVG                    "cards\\6D.svg"
-IDR_SVG407               SVG                    "cards\\7D.svg"
-IDR_SVG408               SVG                    "cards\\8D.svg"
-IDR_SVG409               SVG                    "cards\\9D.svg"
-IDR_SVG410               SVG                    "cards\\10D.svg"
-IDR_SVG411               SVG                    "cards\\11D.svg"
-IDR_SVG412               SVG                    "cards\\12D.svg"
-IDR_SVG413               SVG                    "cards\\13D.svg"
+IDR_SVG104              SVG                     "cards\\4S.svg"
+
+IDR_SVG105              SVG                     "cards\\5S.svg"
+
+IDR_SVG106              SVG                     "cards\\6S.svg"
+
+IDR_SVG107              SVG                     "cards\\7S.svg"
+
+IDR_SVG108              SVG                     "cards\\8S.svg"
+
+IDR_SVG109              SVG                     "cards\\9S.svg"
+
+IDR_SVG110              SVG                     "cards\\10S.svg"
+
+IDR_SVG111              SVG                     "cards\\11S.svg"
+
+IDR_SVG112              SVG                     "cards\\12S.svg"
+
+IDR_SVG113              SVG                     "cards\\13S.svg"
+
+IDR_SVG201              SVG                     "cards\\1H.svg"
+
+IDR_SVG202              SVG                     "cards\\2H.svg"
+
+IDR_SVG203              SVG                     "cards\\3H.svg"
+
+IDR_SVG204              SVG                     "cards\\4H.svg"
+
+IDR_SVG205              SVG                     "cards\\5H.svg"
+
+IDR_SVG206              SVG                     "cards\\6H.svg"
+
+IDR_SVG207              SVG                     "cards\\7H.svg"
+
+IDR_SVG208              SVG                     "cards\\8H.svg"
+
+IDR_SVG209              SVG                     "cards\\9H.svg"
+
+IDR_SVG210              SVG                     "cards\\10H.svg"
+
+IDR_SVG211              SVG                     "cards\\11H.svg"
+
+IDR_SVG212              SVG                     "cards\\12H.svg"
+
+IDR_SVG213              SVG                     "cards\\13H.svg"
+
+IDR_SVG301              SVG                     "cards\\1C.svg"
+
+IDR_SVG302              SVG                     "cards\\2C.svg"
+
+IDR_SVG303              SVG                     "cards\\3C.svg"
+
+IDR_SVG304              SVG                     "cards\\4C.svg"
+
+IDR_SVG305              SVG                     "cards\\5C.svg"
+
+IDR_SVG306              SVG                     "cards\\6C.svg"
+
+IDR_SVG307              SVG                     "cards\\7C.svg"
+
+IDR_SVG308              SVG                     "cards\\8C.svg"
+
+IDR_SVG309              SVG                     "cards\\9C.svg"
+
+IDR_SVG310              SVG                     "cards\\10C.svg"
+
+IDR_SVG311              SVG                     "cards\\11C.svg"
+
+IDR_SVG312              SVG                     "cards\\12C.svg"
+
+IDR_SVG313              SVG                     "cards\\13C.svg"
+
+IDR_SVG401              SVG                     "cards\\1D.svg"
+
+IDR_SVG402              SVG                     "cards\\2D.svg"
+
+IDR_SVG403              SVG                     "cards\\3D.svg"
+
+IDR_SVG404              SVG                     "cards\\4D.svg"
+
+IDR_SVG405              SVG                     "cards\\5D.svg"
+
+IDR_SVG406              SVG                     "cards\\6D.svg"
+
+IDR_SVG407              SVG                     "cards\\7D.svg"
+
+IDR_SVG408              SVG                     "cards\\8D.svg"
+
+IDR_SVG409              SVG                     "cards\\9D.svg"
+
+IDR_SVG410              SVG                     "cards\\10D.svg"
+
+IDR_SVG411              SVG                     "cards\\11D.svg"
+
+IDR_SVG412              SVG                     "cards\\12D.svg"
+
+IDR_SVG413              SVG                     "cards\\13D.svg"
 
 #endif    // “ú–{Œê (“ú–{) resources
 /////////////////////////////////////////////////////////////////////////////
