@@ -28,6 +28,7 @@
 #define CARD_OFFSET (30.0f)
 #define BOARD_OFFSET (10.0f)
 #define NOT_FOUND (-1)
+#define ANIMATION_TIME (200)
 
 TCHAR szClassName[] = TEXT("FreeCell");
 
@@ -51,6 +52,14 @@ inline void SafeRelease(T*& p)
 	}
 }
 
+double easeInOutExpo(double t, double b, double c, double d)
+{
+	if (t == 0) return b;
+	if (t == d) return b + c;
+	if ((t /= d / 2) < 1) return c / 2 * pow(2, 10 * (t - 1)) + b;
+	return c / 2 * (-pow(2, -10 * --t) + 2) + b;
+}
+
 class Card {
 public:
 	~Card() {
@@ -62,6 +71,8 @@ public:
 	BOOL bSelected = FALSE;
 	BOOL bCanDrag = FALSE;
 	BOOL bDrag = FALSE; // ドラッグ中はtrue
+	float animation_from_x = 0;
+	float animation_from_y = 0;
 	float x = 0;
 	float y = 0;
 	float width = CARD_WIDTH;
@@ -69,21 +80,37 @@ public:
 	float scale = CARD_SCALE;
 	float offset_x = 0;
 	float offset_y = 0;
+	ULONGLONG animation_start_time = 0;
 	void Draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1Brush * brush) {
 		if (!d2dDeviceContext) return;
 		if (!bVisible) return;
+
+		float xx;
+		float yy;
+
+		ULONGLONG now = GetTickCount64();
+		if (now > animation_start_time + ANIMATION_TIME) {
+			animation_start_time = 0;
+			xx = x;
+			yy = y;
+		}
+		else {
+			xx = (float)(easeInOutExpo((double)(now - animation_start_time), animation_from_x, x - animation_from_x, (double)(ANIMATION_TIME)));
+			yy = (float)(easeInOutExpo((double)(now - animation_start_time), animation_from_y, y - animation_from_y, (double)(ANIMATION_TIME)));
+		}
+
 		if (bSelected) {
 			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 			D2D1_RECT_F rect;
-			rect.left = x;
-			rect.top = y;
-			rect.right = x + scale * width;
-			rect.bottom = y + scale * height;
+			rect.left = xx;
+			rect.top = yy;
+			rect.right = xx + scale * width;
+			rect.bottom = yy + scale * height;
 			d2dDeviceContext->DrawRectangle(rect, brush, 10.0f);
 		}
 		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
 		transform = transform * D2D1::Matrix3x2F::Scale(scale, scale);
-		transform = transform * D2D1::Matrix3x2F::Translation(x, y);
+		transform = transform * D2D1::Matrix3x2F::Translation(xx, yy);
 		d2dDeviceContext->SetTransform(transform);
 		d2dDeviceContext->DrawSvgDocument(m_svgDocument);
 	}
@@ -156,8 +183,10 @@ public:
 		tablecell
 	};
 	TYPE type = tablecell;
-	std::vector<Card*> cards;
 	void push_back(Card* c) {
+		c->animation_start_time = GetTickCount64();
+		c->animation_from_x = c->x;
+		c->animation_from_y = c->y;
 		if (type == freecell) {
 			c->x = x;
 			c->y = y;
@@ -250,6 +279,9 @@ public:
 	void NormalizationPos() {
 		if (type == freecell || type == homecell) {
 			for (auto p : cards) {
+				p->animation_start_time = GetTickCount64();
+				p->animation_from_x = p->x;
+				p->animation_from_y = p->y;
 				p->x = x;
 				p->y = y;
 			}
@@ -257,6 +289,9 @@ public:
 		else {
 			int i = 0;
 			for (auto p : cards) {
+				p->animation_start_time = GetTickCount64();
+				p->animation_from_x = p->x;
+				p->animation_from_y = p->y;
 				p->x = x;
 				p->y = y + i * CARD_OFFSET;
 				i++;
@@ -297,6 +332,8 @@ public:
 	void resize(size_t size) {
 		cards.resize(size);
 	}
+private:
+	std::vector<Card*> cards;
 };
 
 class Game {
@@ -308,6 +345,7 @@ public:
 	Board board[16];
 	int from_board_no = 0;
 	HWND hWnd;
+	ULONGLONG animation_start_time;
 	Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
 		this->hWnd = hWnd;
 		HRESULT hr = S_OK;
@@ -371,6 +409,7 @@ public:
 		int card_index = 0;
 		for (auto c : count) {
 			for (int i = 0; i < c; i++) {
+				AnimationStart();
 				board[board_index].push_back(temp[card_index]);
 				card_index++;
 			}
@@ -490,6 +529,7 @@ public:
 			if (to_board_no != from_board_no && (to_board_no >= 8 || dragcard.size() == 1) && CanDrop(dragcard[0]->no, to_board_no))
 			{
 				for (auto card : dragcard) {
+					AnimationStart();
 					board[to_board_no].push_back(card);
 				}
 				board[from_board_no].resize(board[from_board_no].size() - dragcard.size()); //元の列から要素消す
@@ -500,11 +540,23 @@ public:
 				}
 			}
 			else {
+				AnimationStart();
 				board[from_board_no].NormalizationPos();
 			}
 			UnDragAll();
 			InvalidateRect(hWnd, 0, 0);
 		}
+	}
+	void AnimationStart() {
+		animation_start_time = GetTickCount64();
+		SetTimer(hWnd, 0x1234, 1, NULL);
+	}
+	void OnTimer() {
+		ULONGLONG now = GetTickCount64();
+		if (now > animation_start_time + ANIMATION_TIME+ 1000) {
+			KillTimer(hWnd, 0x1234);
+		}
+		InvalidateRect(hWnd, 0, 0);
 	}
 };
 
@@ -521,6 +573,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static Game* g;
 	switch (msg)
 	{
+	case WM_TIMER:
+	{
+		g->OnTimer();
+		break;
+	}
 	case WM_LBUTTONDBLCLK:
 	{
 		int x = GET_X_LPARAM(lParam);
@@ -617,6 +674,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_DESTROY:
+		KillTimer(hWnd, 0x1234);
 		SafeRelease(d3dDevice);
 		SafeRelease(dxgiBackBufferSurface);
 		SafeRelease(dxgiDevice);
