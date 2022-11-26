@@ -2,6 +2,7 @@
 // Microsoft Visual C++ で生成されたインクルード ファイル。
 // FreeCell.rc で使用
 //
+#define IDD_SELECT_GAME                 9
 #define IDR_SVG101                      101
 #define ID_NEW_GAME                     101
 #define IDR_SVG102                      102
@@ -55,14 +56,35 @@
 #define IDR_SVG411                      411
 #define IDR_SVG412                      412
 #define IDR_SVG413                      413
+#define IDR_MENU1                       414
+#define IDR_ACCELERATOR1                415
+#define IDD_VERSION                     419
+#define IDI_ICON1                       420
+#define IDD_HELP                        422
+#define IDC_EDIT_SEED                   1001
+#define IDC_EDIT1                       1002
+#define IDC_EDIT_HELP                   1003
+#define ID_40001                        40001
+#define ID_40002                        40002
+#define ID_40003                        40003
+#define ID_40004                        40004
+#define ID_40005                        40005
+#define ID_SELECT_GAME                  40006
+#define ID_EXIT                         40007
+#define ID_HELP                         40008
+#define ID_VERSION                      40009
+#define ID_40012                        40012
+#define ID_40013                        40013
+#define ID_UNDO                         40014
+#define ID_REDO                         40015
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        414
-#define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1001
+#define _APS_NEXT_RESOURCE_VALUE        424
+#define _APS_NEXT_COMMAND_VALUE         40020
+#define _APS_NEXT_CONTROL_VALUE         1004
 #define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif

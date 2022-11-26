@@ -314,7 +314,7 @@ public:
 		if (cards.size() == 0) return 0;
 		return cards.back();
 	}
-	void getdraglist(float _x, float _y, std::vector<Card*>& dragcard) {
+	void GetCardListFromPos(float _x, float _y, std::vector<Card*>& dragcard) {
 		dragcard.clear();
 		for (auto it = cards.rbegin(), end = cards.rend(); it != end; ++it) {
 			if ((*it)->HitTest(_x, _y) && (*it)->CanDrag()) {
@@ -335,11 +335,27 @@ public:
 			}
 		}
 	}
+	void GetCardListFromCount(byte count, std::vector<Card*>& dragcard) {
+		dragcard.clear();
+		int i = 0;
+		for (auto it = cards.begin(), end = cards.end(); it != end; ++it) {
+			if (cards.size() - count <= i) {
+				dragcard.push_back(*it);
+			}
+			i++;
+		}
+	}
 	void resize(size_t size) {
 		cards.resize(size);
 	}
 private:
 	std::vector<Card*> cards;
+};
+
+struct operation {
+	byte from_board_no;
+	byte to_board_no;
+	byte card_count;
 };
 
 class Game {
@@ -352,6 +368,8 @@ public:
 	int from_board_no = 0;
 	HWND hWnd;
 	ULONGLONG animation_start_time;
+	std::vector<operation> buffer;
+	int generation = 0;
 	Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
 		this->hWnd = hWnd;
 		HRESULT hr = S_OK;
@@ -400,15 +418,17 @@ public:
 		SafeRelease(selectBrush);
 		SafeRelease(emptyBrush);
 	}
-	void OnNewGame() {
+	void OnNewGame(unsigned int seed = -1) {
 		UnSelectAll();
 		UnDragAll();
 		for (auto& i : board) {
 			i.clear();
 		};
+		generation = 0;
+		buffer.clear();
 		std::vector<Card*> temp(pcard.begin(), pcard.end());
 		std::random_device rd;
-		std::mt19937 generator(rd());
+		std::mt19937 generator(seed == -1 ? rd() : seed);
 		std::shuffle(temp.begin(), temp.end(), generator);
 		int count[] = { 7, 7, 7, 7, 6, 6, 6, 6 };
 		int board_index = 8;
@@ -503,6 +523,8 @@ public:
 				AnimationStart();
 				board[to_board_no].push_back(p);
 				board[from_board_no].pop_back();
+				operation op = { (byte)from_board_no, (byte)to_board_no, (byte)1 };
+				Operation(op);
 				SetCanDragCard();
 				InvalidateRect(hWnd, 0, 0);
 				if (IsGameClear()) {
@@ -515,7 +537,7 @@ public:
 		UnSelectAll();
 		UnDragAll();
 		int board_no = x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
-		board[board_no].getdraglist((float)x, (float)y, dragcard);
+		board[board_no].GetCardListFromPos((float)x, (float)y, dragcard);
 		if (dragcard.size() > 0) {
 			for (auto card : dragcard) {
 				card->bSelected = TRUE;
@@ -547,11 +569,18 @@ public:
 			}
 		}
 	}
-	void OnLButtonUP(int x, int y) {
+	void OnLButtonUP(int, int) {
 		if (dragcard.size() > 0) {
 			ReleaseCapture();
+			Card* back = dragcard.back();
+			int x = (int)(back->x + back->scale * back->width / 2.0f); // マウスカーソルの位置ではなくカードの中心点で対象ボードを判定
+			int y = (int)(back->y + back->scale * back->height / 2.0f);
 			int to_board_no = (int)x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
-			if (to_board_no != from_board_no && (to_board_no >= 8 || dragcard.size() == 1) && CanDrop(dragcard[0]->no, to_board_no))
+			if (
+				to_board_no != from_board_no &&
+				(to_board_no >= 8 || dragcard.size() == 1) &&
+				CanDrop(dragcard[0]->no, to_board_no) &&
+				dragcard.size() <= GetSpaceCount() + 1)
 			{
 				SetActiveBoard(to_board_no);
 				for (auto card : dragcard) {
@@ -559,6 +588,8 @@ public:
 					board[to_board_no].push_back(card);
 				}
 				board[from_board_no].resize(board[from_board_no].size() - dragcard.size()); //元の列から要素消す
+				operation op = {(byte)from_board_no, (byte)to_board_no, (byte)dragcard.size() };
+				Operation(op);
 				UnSelectAll();
 				SetCanDragCard();
 				if (IsGameClear()) {
@@ -586,7 +617,146 @@ public:
 		}
 		InvalidateRect(hWnd, 0, 0);
 	}
+	int GetSpaceCount() {
+		int nCount = 0;
+		for (auto b : board) {
+			if (b.type != Board::homecell && b.size() == 0) {
+				nCount++;
+			}
+		}
+		return nCount;
+	}
+	void Operation(operation & op) {
+		if (generation == buffer.size()) {
+			buffer.push_back(op);
+		}
+		else {
+			buffer.resize(generation);
+			buffer.push_back(op);
+		}
+		generation++;
+	}
+	void OnUndo() {
+		if (generation <= 0) return;
+		byte from_board_no = buffer[generation - 1].from_board_no;
+		byte to_board_no = buffer[generation - 1].to_board_no;
+		byte card_count = buffer[generation - 1].card_count;		
+		board[to_board_no].GetCardListFromCount(card_count, dragcard);
+		SetActiveBoard(from_board_no);
+		for (auto card : dragcard) {
+			AnimationStart();
+			board[from_board_no].push_back(card);
+		}
+		board[to_board_no].resize(board[to_board_no].size() - dragcard.size()); //元の列から要素消す
+		dragcard.clear();
+		generation--;
+	}
+	void OnRedo() {
+		if (generation == buffer.size()) return;
+		byte from_board_no = buffer[generation].from_board_no;
+		byte to_board_no = buffer[generation].to_board_no;
+		byte card_count = buffer[generation].card_count;
+		board[from_board_no].GetCardListFromCount(card_count, dragcard);
+		SetActiveBoard(to_board_no);
+		for (auto card : dragcard) {
+			AnimationStart();
+			board[to_board_no].push_back(card);
+		}
+		board[from_board_no].resize(board[from_board_no].size() - dragcard.size()); //元の列から要素消す
+		dragcard.clear();
+		generation++;
+	}
 };
+
+void CenterWindow(HWND hWnd)
+{
+	RECT rc, rc2;
+	int	x, y;
+	HWND hParent = GetParent(hWnd);
+	if (hParent) {
+		GetWindowRect(hParent, &rc);
+	}
+	else {
+		SystemParametersInfo(SPI_GETWORKAREA, 0, &rc, 0);
+	}
+	GetWindowRect(hWnd, &rc2);
+	x = ((rc.right - rc.left) - (rc2.right - rc2.left)) / 2 + rc.left;
+	y = ((rc.bottom - rc.top) - (rc2.bottom - rc2.top)) / 2 + rc.top;
+	SetWindowPos(hWnd, HWND_TOP, x, y, 0, 0, SWP_NOSIZE);
+}
+
+INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
+{
+	static Game* g;
+	switch (msg)
+	{
+	case WM_INITDIALOG:
+		g = (Game*)lParam;
+		CenterWindow(hDlg);
+		SetDlgItemInt(hDlg, IDC_EDIT_SEED, (UINT)(rand() % 32000), FALSE);
+		return TRUE;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			unsigned int seed = GetDlgItemInt(hDlg, IDC_EDIT_SEED, NULL, FALSE);
+			g->OnNewGame(seed);
+			return TRUE;
+		} else if (LOWORD(wParam) == IDCANCEL) {
+			EndDialog(hDlg, LOWORD(wParam));
+			return TRUE;
+		}
+		break;
+	}
+	return FALSE;
+}
+
+INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
+{
+	static Game* g;
+	switch (msg)
+	{
+	case WM_INITDIALOG:
+		g = (Game*)lParam;
+		CenterWindow(hDlg);
+		return TRUE;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return TRUE;
+		}
+		break;
+	}
+	return FALSE;
+}
+
+INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
+{
+	static Game* g;
+	switch (msg)
+	{
+	case WM_INITDIALOG:
+		g = (Game*)lParam;
+		CenterWindow(hDlg);
+		SetDlgItemText(hDlg, IDC_EDIT_HELP, L"【遊び方】\r\nフリーセルは、一人で遊ぶトランプゲームです。以下のルールに従い、"
+			L"ランダムに配置されたカードを左上の4つのフリーセルと呼ばれるスペースを活用して、52枚のすべてのカードを右上のホームセルと呼ばれる4つのスペースに移すのが目的です。\r\n"
+			L"\r\n\r\n"
+			L"ルール①\r\n列の先頭のカードをマウスドラッグして動かすことができる。ただし、移動元のカードは、移動先の先頭列のカードの色（赤または黒）が異なり、数字が1つ小さい場合のみ。\r\n\r\n"
+			L"ルール②\r\nフリーセルには４枚までカードを自由に置くことができる。また、フリーセルに置いたカードはルール①の条件を満たすとき列の先頭に移動できる。\r\n\r\n"
+			L"ルール③\r\nホームセルには、４種類のマークのカードをそれぞれ１から１３まで小さい順に重ねることができる。"
+		);
+		return TRUE;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return TRUE;
+		}
+		break;
+	}
+	return FALSE;
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -683,8 +853,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_COMMAND:
-		if (LOWORD(wParam) == ID_NEW_GAME) {
+		switch (LOWORD(wParam)) {
+		case ID_NEW_GAME:
 			g->OnNewGame();
+			break;
+		case ID_SELECT_GAME:
+			DialogBoxParam(GetModuleHandle(0), MAKEINTRESOURCE(IDD_SELECT_GAME), hWnd, SelectGameDialogProc, (LPARAM)g);
+			break;
+		case ID_VERSION:
+			DialogBoxParam(GetModuleHandle(0), MAKEINTRESOURCE(IDD_VERSION), hWnd, VersionDialogProc, (LPARAM)g);
+			break;
+		case ID_EXIT:
+			SendMessage(hWnd, WM_CLOSE, 0, 0);
+			break;
+		case ID_UNDO:
+			g->OnUndo();
+			break;
+		case ID_REDO:
+			g->OnRedo();
+			break;
+		case ID_HELP:
+			DialogBoxParam(GetModuleHandle(0), MAKEINTRESOURCE(IDD_HELP), hWnd, HelpDialogProc, (LPARAM)g);
+			break;
 		}
 		break;
 	case WM_PAINT:
@@ -725,7 +915,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	MSG msg = {};
-	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, 0, LoadCursor(0,IDC_ARROW), 0, 0, szClassName };
+	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1)), LoadCursor(0,IDC_ARROW), 0, MAKEINTRESOURCE(IDR_MENU1), szClassName};
 	RegisterClass(&wndclass);
 	RECT rect = {0, 0, CLIENT_WIDTH, CLIENT_HEIGHT};
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
@@ -733,11 +923,16 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	HWND hWnd = CreateWindow(szClassName, TEXT("FreeCell"), dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
 	UpdateWindow(hWnd);
+	HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
 	while (GetMessage(&msg, 0, 0, 0))
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		if (!TranslateAccelerator(hWnd, hAccel, &msg))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
+	DestroyAcceleratorTable(hAccel);
 	CoUninitialize();
 	return (int)msg.wParam;
 }

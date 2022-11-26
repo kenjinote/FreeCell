@@ -154,6 +154,148 @@ IDR_SVG412              SVG                     "cards\\12D.svg"
 
 IDR_SVG413              SVG                     "cards\\13D.svg"
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "ゲーム(&G)"
+    BEGIN
+        MENUITEM "新しいゲーム(&N)\tF2",              ID_NEW_GAME
+        MENUITEM "ゲームの選択(&G)\tF3",              ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "元に戻す(&U)\tCtrl+Z",            ID_UNDO
+        MENUITEM "やり直す(&R)\tCtrl+Y",            ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "終了(&X)\tAlt+F4",              ID_EXIT
+    END
+    POPUP "ヘルプ(&H)"
+    BEGIN
+        MENUITEM "ヘルプの表示(&V)\tF1",              ID_HELP
+        MENUITEM "バージョン情報(&A)",                 ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SELECT_GAME DIALOGEX 0, 0, 131, 54
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ゲームの選択"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "ゲーム番号(&N)：",IDC_STATIC,7,9,51,8
+    EDITTEXT        IDC_EDIT_SEED,63,7,60,14,ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,13,33,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,67,33,50,14
+END
+
+IDD_VERSION DIALOGEX 0, 0, 125, 53
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "バージョン情報"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,37,32,50,14
+    ICON            IDI_ICON1,IDC_STATIC,7,7,21,20
+    LTEXT           "v1.0.2",IDC_STATIC,46,12,22,8
+END
+
+IDD_HELP DIALOGEX 0, 0, 309, 176
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ヘルプ"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,252,155,50,14
+    EDITTEXT        IDC_EDIT_HELP,7,7,295,145,ES_MULTILINE | ES_READONLY | WS_VSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ACCELERATOR1 ACCELERATORS
+BEGIN
+    VK_F2,          ID_NEW_GAME,            VIRTKEY, NOINVERT
+    VK_F3,          ID_SELECT_GAME,         VIRTKEY, NOINVERT
+    "Z",            ID_UNDO,                VIRTKEY, CONTROL, NOINVERT
+    "Y",            ID_REDO,                VIRTKEY, CONTROL, NOINVERT
+    VK_F1,          ID_HELP,                VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SELECT_GAME, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 124
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 47
+    END
+
+    IDD_VERSION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 118
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 46
+    END
+
+    IDD_HELP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 169
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_SELECT_GAME AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_VERSION AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_HELP AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "icon1.ico"
+
 #endif    // 日本語 (日本) resources
 /////////////////////////////////////////////////////////////////////////////
 
