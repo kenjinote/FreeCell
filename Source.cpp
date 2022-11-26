@@ -28,7 +28,7 @@
 #define CARD_OFFSET (30.0f)
 #define BOARD_OFFSET (10.0f)
 #define NOT_FOUND (-1)
-#define ANIMATION_TIME (200)
+#define ANIMATION_TIME (250)
 
 TCHAR szClassName[] = TEXT("FreeCell");
 
@@ -58,6 +58,11 @@ double easeInOutExpo(double t, double b, double c, double d)
 	if (t == d) return b + c;
 	if ((t /= d / 2) < 1) return c / 2 * pow(2, 10 * (t - 1)) + b;
 	return c / 2 * (-pow(2, -10 * --t) + 2) + b;
+}
+
+double easeOutExpo(double t, double b, double c, double d)
+{
+	return (t == d) ? b + c : c * (-pow(2, -10 * t / d) + 1) + b;
 }
 
 class Card {
@@ -95,8 +100,8 @@ public:
 			yy = y;
 		}
 		else {
-			xx = (float)(easeInOutExpo((double)(now - animation_start_time), animation_from_x, x - animation_from_x, (double)(ANIMATION_TIME)));
-			yy = (float)(easeInOutExpo((double)(now - animation_start_time), animation_from_y, y - animation_from_y, (double)(ANIMATION_TIME)));
+			xx = (float)(easeOutExpo((double)(now - animation_start_time), animation_from_x, x - animation_from_x, (double)(ANIMATION_TIME)));
+			yy = (float)(easeOutExpo((double)(now - animation_start_time), animation_from_y, y - animation_from_y, (double)(ANIMATION_TIME)));
 		}
 
 		if (bSelected) {
@@ -183,6 +188,7 @@ public:
 		tablecell
 	};
 	TYPE type = tablecell;
+	bool active = false;
 	void push_back(Card* c) {
 		c->animation_start_time = GetTickCount64();
 		c->animation_from_x = c->x;
@@ -441,8 +447,15 @@ public:
 		return board[board_no].canpush(card_no);
 	}
 	void DrawBoard(ID2D1DeviceContext6* d2dDeviceContext) {
-		for (auto& m : board) {
-			m.draw(d2dDeviceContext, selectBrush, emptyBrush);
+		for (int i = _countof(board) - 1; i >= 0; i--) {
+			if (board[i].active == false) {
+				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush);
+			}
+		}
+		for (int i = _countof(board) - 1; i >= 0; i--) {
+			if (board[i].active == true) {
+				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush);
+			}
 		}
 		for (auto& i : dragcard) {
 			i->Draw(d2dDeviceContext, selectBrush);
@@ -486,6 +499,8 @@ public:
 			int to_board_no = CanHome(p->no);
 			if (to_board_no == NOT_FOUND && from_board_no >= 4) to_board_no = CanFreeCell(p->no);
 			if (to_board_no != NOT_FOUND) {
+				SetActiveBoard(to_board_no);
+				AnimationStart();
 				board[to_board_no].push_back(p);
 				board[from_board_no].pop_back();
 				SetCanDragCard();
@@ -522,12 +537,23 @@ public:
 			InvalidateRect(hWnd, 0, 0);
 		}
 	}
+	void SetActiveBoard(int board_no) {
+		for (int i = 0; i < _countof(board); i++) {
+			if (i == board_no) {
+				board[i].active = true;
+			}
+			else {
+				board[i].active = false;
+			}
+		}
+	}
 	void OnLButtonUP(int x, int y) {
 		if (dragcard.size() > 0) {
 			ReleaseCapture();
 			int to_board_no = (int)x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
 			if (to_board_no != from_board_no && (to_board_no >= 8 || dragcard.size() == 1) && CanDrop(dragcard[0]->no, to_board_no))
 			{
+				SetActiveBoard(to_board_no);
 				for (auto card : dragcard) {
 					AnimationStart();
 					board[to_board_no].push_back(card);
@@ -540,6 +566,7 @@ public:
 				}
 			}
 			else {
+				SetActiveBoard(from_board_no);
 				AnimationStart();
 				board[from_board_no].NormalizationPos();
 			}
@@ -553,8 +580,9 @@ public:
 	}
 	void OnTimer() {
 		ULONGLONG now = GetTickCount64();
-		if (now > animation_start_time + ANIMATION_TIME+ 1000) {
+		if (now > animation_start_time + ANIMATION_TIME * 2) {
 			KillTimer(hWnd, 0x1234);
+			SetActiveBoard(-1);
 		}
 		InvalidateRect(hWnd, 0, 0);
 	}
