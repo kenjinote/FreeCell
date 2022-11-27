@@ -1,6 +1,6 @@
 # FreeCell
 
-![image](https://user-images.githubusercontent.com/2605401/203512119-21ce5045-160b-45df-b4b5-dbce2511cf58.png)
+![Animation](https://user-images.githubusercontent.com/2605401/204117056-71cc4265-71c8-4903-b871-b9cf9bdf579b.gif)
 
 ## ダウンロード
 [ダウンロード](https://github.com/kenjinote/FreeCell/releases/latest/download/FreeCell.exe)
