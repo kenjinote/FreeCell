@@ -528,6 +528,9 @@ public:
 				if (IsGameClear()) {
 					AskNewGame();
 				}
+				else {
+					AutoMove(ANIMATION_TIME);
+				}
 			}
 		}
 	}
@@ -592,6 +595,9 @@ public:
 				SetCanDragCard();
 				if (IsGameClear()) {
 					AskNewGame();
+				}
+				else {
+					AutoMove();
 				}
 			}
 			else {
@@ -663,6 +669,40 @@ public:
 		board[from_board_no].resize(board[from_board_no].size() - dragcard.size()); //元の列から要素消す
 		dragcard.clear();
 		generation++;
+	}
+	void AutoMove(ULONGLONG delay = 0ULL) {
+		for (int nMoveCount = 0;; nMoveCount++) {
+			bool bMoved = false;
+			for (int from_board_no = 0; from_board_no < 16; from_board_no++) {
+				if (board[from_board_no].size() > 0 && (board[from_board_no].type == Board::freecell || board[from_board_no].type == Board::tablecell)) {
+					Card* card = board[from_board_no].back();
+					for (int to_board_no = 4; to_board_no < 8; to_board_no++) {
+						if (CanDrop(card->no, to_board_no)) {
+							bMoved = true;
+							SetActiveBoard(to_board_no);
+							AnimationStart(ANIMATION_TIME * nMoveCount + delay);
+							board[to_board_no].push_back(card, ANIMATION_TIME * nMoveCount + delay);
+							board[from_board_no].resize(board[from_board_no].size() - 1);
+							operation op = { (byte)from_board_no, (byte)to_board_no, (byte)1 };
+							Operation(op);
+							UnSelectAll();
+							SetCanDragCard();
+							if (IsGameClear()) {
+								AskNewGame();
+								return;
+							}
+							break;
+						}
+					}
+				}
+				if (bMoved) {
+					break;
+				}
+			}
+			if (!bMoved) {
+				break;
+			}
+		}
 	}
 };
 
