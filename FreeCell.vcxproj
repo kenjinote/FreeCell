@@ -235,7 +235,6 @@
     <None Include="cards\TD.svg" />
     <None Include="cards\TH.svg" />
     <None Include="cards\TS.svg" />
-    <None Include="cursor1.cur" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

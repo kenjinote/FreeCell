@@ -52,14 +52,6 @@ inline void SafeRelease(T*& p)
 	}
 }
 
-double easeInOutExpo(double t, double b, double c, double d)
-{
-	if (t == 0) return b;
-	if (t == d) return b + c;
-	if ((t /= d / 2) < 1) return c / 2 * pow(2, 10 * (t - 1)) + b;
-	return c / 2 * (-pow(2, -10 * --t) + 2) + b;
-}
-
 double easeOutExpo(double t, double b, double c, double d)
 {
 	return (t == d) ? b + c : c * (-pow(2, -10 * t / d) + 1) + b;
@@ -94,7 +86,11 @@ public:
 		float yy;
 
 		ULONGLONG now = GetTickCount64();
-		if (now > animation_start_time + ANIMATION_TIME) {
+		if (now < animation_start_time) {
+			xx = animation_from_x;
+			yy = animation_from_y;
+		}
+		else if (now > animation_start_time + ANIMATION_TIME) {
 			animation_start_time = 0;
 			xx = x;
 			yy = y;
@@ -189,8 +185,8 @@ public:
 	};
 	TYPE type = tablecell;
 	bool active = false;
-	void push_back(Card* c) {
-		c->animation_start_time = GetTickCount64();
+	void push_back(Card* c, ULONGLONG delay = 0ULL) {
+		c->animation_start_time = GetTickCount64() + delay;
 		c->animation_from_x = c->x;
 		c->animation_from_y = c->y;
 		if (type == freecell) {
@@ -430,19 +426,21 @@ public:
 		std::random_device rd;
 		std::mt19937 generator(seed == -1 ? rd() : seed);
 		std::shuffle(temp.begin(), temp.end(), generator);
+		for (auto &c : pcard) {
+			c->x = CLIENT_WIDTH / 2.0f - c->scale * c->width / 2.0f;
+			c->y = CLIENT_HEIGHT;
+		}
+		InvalidateRect(hWnd, 0, 0);
+		UpdateWindow(hWnd);
 		int count[] = { 7, 7, 7, 7, 6, 6, 6, 6 };
-		int board_index = 8;
-		int card_index = 0;
-		for (auto c : count) {
-			for (int i = 0; i < c; i++) {
-				AnimationStart();
-				board[board_index].push_back(temp[card_index]);
-				card_index++;
-			}
-			board_index++;
+		int index = 0;
+		for (auto &c : pcard) {
+			int delay = 20 * index;
+			AnimationStart(delay);
+			board[8 + index % 8].push_back(temp[index], delay);
+			index++;
 		}
 		SetCanDragCard();
-		InvalidateRect(hWnd, 0, 0);
 	}
 	void UnSelectAll() {
 		for (auto& i : pcard) {
@@ -605,8 +603,8 @@ public:
 			InvalidateRect(hWnd, 0, 0);
 		}
 	}
-	void AnimationStart() {
-		animation_start_time = GetTickCount64();
+	void AnimationStart(ULONGLONG delay = 0ULL) {
+		animation_start_time = GetTickCount64() + delay;
 		SetTimer(hWnd, 0x1234, 1, NULL);
 	}
 	void OnTimer() {
