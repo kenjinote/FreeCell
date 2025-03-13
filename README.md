@@ -32,8 +32,8 @@
 
 ## カード絵柄について
 
-Vectorized Playing Cards 1.3- http://code.google.com/p/vectorized-playing-cards/
+Vectorized Playing Cards 1.3- https://sourceforge.net/projects/vector-cards/
 
 Copyright 2011 - Chris Aguilar
 
-Licensed under LGPL 3 - www.gnu.org/copyleft/lesser.html
+Licensed under LGPL 3 - https://www.gnu.org/copyleft/lesser.html
