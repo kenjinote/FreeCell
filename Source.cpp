@@ -844,50 +844,138 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_CREATE:
 	{
-		HRESULT hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT, featureLevels, 7, D3D11_SDK_VERSION, &d3dDevice, NULL, NULL);
-		if (SUCCEEDED(hr)) {
-			hr = d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
+		HRESULT hr = S_OK;
+
+		// 1) D3D11 デバイス作成
+		D3D_FEATURE_LEVEL featureLevels[] =
+		{
+			D3D_FEATURE_LEVEL_11_1, // Windows 8 以降で有効。ダメなら下にフォールバック
+			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_10_1,
+			D3D_FEATURE_LEVEL_10_0,
+			D3D_FEATURE_LEVEL_9_3,
+			D3D_FEATURE_LEVEL_9_2,
+			D3D_FEATURE_LEVEL_9_1
+		};
+
+		UINT deviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // ← D2D 連携には必須
+#ifdef _DEBUG
+		deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+		D3D_FEATURE_LEVEL obtained = D3D_FEATURE_LEVEL_11_0;
+
+		hr = D3D11CreateDevice(
+			nullptr,
+			D3D_DRIVER_TYPE_HARDWARE,
+			nullptr,
+			deviceFlags,
+			featureLevels,
+			_countof(featureLevels),
+			D3D11_SDK_VERSION,
+			&d3dDevice,
+			&obtained,
+			NULL
+		);
+		if (FAILED(hr)) return -1;
+
+		// 2) IDXGIDevice を取得
+		hr = d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
+		if (FAILED(hr)) return -1;
+
+		// 3) DXGI Factory 作成
+		UINT factoryFlags = 0;
+#ifdef _DEBUG
+		factoryFlags |= DXGI_CREATE_FACTORY_DEBUG; // リリース環境では 0 に
+#endif
+		hr = CreateDXGIFactory2(factoryFlags, __uuidof(IDXGIFactory2), (void**)&dxgiFactory);
+		if (FAILED(hr)) return -1;
+
+		// Alt+Enter を OS に奪われないよう関連付け（必要なら）
+		if (dxgiFactory)
+		{
+			IDXGIFactory* oldFactory = nullptr;
+			hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory), (void**)&oldFactory);
+			if (SUCCEEDED(hr) && oldFactory)
+			{
+				oldFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+				oldFactory->Release();
+			}
 		}
-		if (SUCCEEDED(hr)) {
-			hr = D2D1CreateDevice(dxgiDevice, D2D1::CreationProperties(D2D1_THREADING_MODE_SINGLE_THREADED, D2D1_DEBUG_LEVEL_NONE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE), (ID2D1Device**)&d2dDevice);
-		}
-		if (SUCCEEDED(hr)) {
-			hr = d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, (ID2D1DeviceContext**)&d2dDeviceContext);
-		}
-		if (SUCCEEDED(hr)) {
-			hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, __uuidof(IDXGIFactory2), (void**)&dxgiFactory);
-		}
-		if (SUCCEEDED(hr)) {
-			DXGI_SWAP_CHAIN_DESC1 dscd = {};
-			dscd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-			dscd.BufferCount = 2;
-			dscd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			dscd.Flags = 0;
-			dscd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			dscd.Height = CLIENT_HEIGHT;
-			dscd.SampleDesc.Count = 1;
-			dscd.SampleDesc.Quality = 0;
-			dscd.Scaling = DXGI_SCALING_NONE;
-			dscd.Stereo = FALSE;
-			dscd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-			dscd.Width = CLIENT_WIDTH;
-			hr = dxgiFactory->CreateSwapChainForHwnd(d3dDevice, hWnd, &dscd, NULL, NULL, &dxgiSwapChain);
-		}
-		if (SUCCEEDED(hr)) {
-			hr = dxgiSwapChain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgiBackBufferSurface);
-		}
-		if (SUCCEEDED(hr)) {
-			hr = d2dDeviceContext->CreateBitmapFromDxgiSurface(dxgiBackBufferSurface, D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE), 0, 0), &bmpTarget);
-		}
-		if (SUCCEEDED(hr)) {
-			d2dDeviceContext->SetTarget(bmpTarget);
-			d2dDeviceContext->SetUnitMode(D2D1_UNIT_MODE_PIXELS);
-			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-			d2dDeviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_ALIASED);
-			g = new Game(hWnd, d2dDeviceContext);
-			if (!g) return -1;
-			PostMessage(hWnd, WM_COMMAND, ID_NEW_GAME, 0);
-		}
+
+		// 4) スワップチェーン作成（HWND）
+		DXGI_SWAP_CHAIN_DESC1 scd = {};
+		scd.Width = CLIENT_WIDTH;
+		scd.Height = CLIENT_HEIGHT;
+		scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;                // D2D と相性良し
+		scd.Stereo = FALSE;
+		scd.SampleDesc.Count = 1;
+		scd.SampleDesc.Quality = 0;
+		scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		scd.BufferCount = 2;                                    // ダブルバッファ
+		scd.Scaling = DXGI_SCALING_NONE;
+		scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;      // 推奨（Win8+）
+		scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;                 // HWND の場合は IGNORE
+
+		hr = dxgiFactory->CreateSwapChainForHwnd(
+			d3dDevice,    // IUnknown* (ID3D11Device*)
+			hWnd,
+			&scd,
+			nullptr,        // フルスクリーン記述（未使用）
+			nullptr,        // 出力ターゲット（未指定）
+			&dxgiSwapChain
+		);
+		if (FAILED(hr)) return -1;
+
+		// 5) D2D デバイス & デバイスコンテキスト作成
+		//    D2D1CreateDevice は D2D1.1 API
+		D2D1_CREATION_PROPERTIES cp = D2D1::CreationProperties(
+			D2D1_THREADING_MODE_SINGLE_THREADED,
+#ifdef _DEBUG
+			D2D1_DEBUG_LEVEL_INFORMATION,
+#else
+			D2D1_DEBUG_LEVEL_NONE,
+#endif
+			D2D1_DEVICE_CONTEXT_OPTIONS_NONE
+		);
+
+		hr = D2D1CreateDevice(dxgiDevice, cp, (ID2D1Device**)&d2dDevice);
+		if (FAILED(hr)) return -1;
+
+		hr = d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, (ID2D1DeviceContext**)&d2dDeviceContext);
+		if (FAILED(hr)) return -1;
+
+		// 6) バックバッファから IDXGISurface を取得し、D2D ターゲットビットマップを作成
+		hr = dxgiSwapChain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgiBackBufferSurface);
+		if (FAILED(hr)) return -1;
+
+		// 重要：
+		//  - HWND スワップチェーンでも、D2D ビットマップの PixelFormat は PREMULTIPLIED が安定
+		//  - D2D1_BITMAP_OPTIONS_TARGET | CANNOT_DRAW の組み合わせが特に安全
+		D2D1_BITMAP_PROPERTIES1 bp = D2D1::BitmapProperties1(
+			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+			D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+			0.0f,
+			0.0f
+		);
+
+		hr = d2dDeviceContext->CreateBitmapFromDxgiSurface(
+			dxgiBackBufferSurface,
+			&bp,
+			&bmpTarget
+		);
+		if (FAILED(hr)) return -1;
+
+		d2dDeviceContext->SetTarget(bmpTarget);
+		d2dDeviceContext->SetUnitMode(D2D1_UNIT_MODE_PIXELS);
+		d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+		d2dDeviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_ALIASED);
+		g = new Game(hWnd, d2dDeviceContext);
+
+		if (!g) return -1;
+
+		PostMessage(hWnd, WM_COMMAND, ID_NEW_GAME, 0);
+
 		break;
 	}
 	case WM_COMMAND:
