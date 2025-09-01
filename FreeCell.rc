@@ -13,6 +13,57 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
+// “ú–{Œê (ƒjƒ…[ƒgƒ‰ƒ‹) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+LANGUAGE LANG_JAPANESE, SUBLANG_NEUTRAL
+#pragma code_page(932)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "ƒQ[ƒ€(&G)"
+    BEGIN
+        MENUITEM "V‚µ‚¢ƒQ[ƒ€(&N)\tF2",              ID_NEW_GAME
+        MENUITEM "ƒQ[ƒ€‚Ì‘I‘ð(&S)...\tF3",           ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "Œ³‚É–ß‚·(&U)\tCtrl+Z",            ID_UNDO
+        MENUITEM "‚â‚è’¼‚·(&R)\tCtrl+Y",            ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "I—¹(&X)\tAlt+F4",              ID_EXIT
+    END
+    POPUP "ƒwƒ‹ƒv(&H)"
+    BEGIN
+        MENUITEM "ƒwƒ‹ƒv‚Ì•\Ž¦(&H)\tF1",              ID_HELP
+        MENUITEM "ƒo[ƒWƒ‡ƒ“î•ñ(&A)",                 ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_STRING424           "ƒwƒ‹ƒv"
+    IDS_STRING425           "ƒQ[ƒ€‚Ì‘I‘ð"
+    IDS_STRING426           "ƒQ[ƒ€”Ô†(&N):"
+    IDS_STRING427           "ƒLƒƒƒ“ƒZƒ‹"
+    IDS_STRING428           "ƒo[ƒWƒ‡ƒ“î•ñ"
+    IDS_STRING429           "y—V‚Ñ•ûz\r\nƒtƒŠ[ƒZƒ‹‚ÍAˆêl‚Å—V‚Ôƒgƒ‰ƒ“ƒvƒQ[ƒ€‚Å‚·BˆÈ‰º‚Ìƒ‹[ƒ‹‚É]‚¢Aƒ‰ƒ“ƒ_ƒ€‚É”z’u‚³‚ê‚½ƒJ[ƒh‚ð¶ã‚Ì4‚Â‚ÌƒtƒŠ[ƒZƒ‹‚ÆŒÄ‚Î‚ê‚éƒXƒy[ƒX‚ðŠˆ—p‚µ‚ÄA52–‡‚Ì‚·‚×‚Ä‚ÌƒJ[ƒh‚ð‰Eã‚Ìƒz[ƒ€ƒZƒ‹‚ÆŒÄ‚Î‚ê‚é4‚Â‚ÌƒXƒy[ƒX‚ÉˆÚ‚·‚Ì‚ª–Ú“I‚Å‚·B\r\n\r\n\r\nƒ‹[ƒ‹‡@\r\n—ñ‚Ìæ“ª‚ÌƒJ[ƒh‚ðƒ}ƒEƒXƒhƒ‰ƒbƒO‚µ‚Ä“®‚©‚·‚±‚Æ‚ª‚Å‚«‚éB‚½‚¾‚µAˆÚ“®Œ³‚ÌƒJ[ƒh‚ÍAˆÚ“®æ‚Ìæ“ª—ñ‚ÌƒJ[ƒh‚ÌFiÔ‚Ü‚½‚Í•j‚ªˆÙ‚È‚èA”Žš‚ª1‚Â¬‚³‚¢ê‡‚Ì‚ÝB\r\n\r\nƒ‹[ƒ‹‡A\r\nƒtƒŠ[ƒZƒ‹‚É‚Í‚S–‡‚Ü‚ÅƒJ[ƒh‚ðŽ©—R‚É’u‚­‚±‚Æ‚ª‚Å‚«‚éB‚Ü‚½AƒtƒŠ[ƒZƒ‹‚É’u‚¢‚½ƒJ[ƒh‚Íƒ‹[ƒ‹‡@‚ÌðŒ‚ð–ž‚½‚·‚Æ‚«—ñ‚Ìæ“ª‚ÉˆÚ“®‚Å‚«‚éB\r\n\r\nƒ‹[ƒ‹‡B\r\nƒz[ƒ€ƒZƒ‹‚É‚ÍA‚SŽí—Þ‚Ìƒ}[ƒN‚ÌƒJ[ƒh‚ð‚»‚ê‚¼‚ê‚P‚©‚ç‚P‚R‚Ü‚Å¬‚³‚¢‡‚Éd‚Ë‚é‚±‚Æ‚ª‚Å‚«‚éB"
+END
+
+#endif    // “ú–{Œê (ƒjƒ…[ƒgƒ‰ƒ‹) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
 // ƒjƒ…[ƒgƒ‰ƒ‹ (Šù’è) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
@@ -131,59 +182,34 @@ IDR_SVG413              SVG                     "cards\\13D.svg"
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Menu
-//
-
-IDR_MENU1 MENU
-BEGIN
-    POPUP "ƒQ[ƒ€(&G)"
-    BEGIN
-        MENUITEM "V‚µ‚¢ƒQ[ƒ€(&N)\tF2",              ID_NEW_GAME
-        MENUITEM "ƒQ[ƒ€‚Ì‘I‘ð(&G)\tF3",              ID_SELECT_GAME
-        MENUITEM SEPARATOR
-        MENUITEM "Œ³‚É–ß‚·(&U)\tCtrl+Z",            ID_UNDO
-        MENUITEM "‚â‚è’¼‚·(&R)\tCtrl+Y",            ID_REDO
-        MENUITEM SEPARATOR
-        MENUITEM "I—¹(&X)\tAlt+F4",              ID_EXIT
-    END
-    POPUP "ƒwƒ‹ƒv(&H)"
-    BEGIN
-        MENUITEM "ƒwƒ‹ƒv‚Ì•\Ž¦(&V)\tF1",              ID_HELP
-        MENUITEM "ƒo[ƒWƒ‡ƒ“î•ñ(&A)",                 ID_VERSION
-    END
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
 // Dialog
 //
 
 IDD_SELECT_GAME DIALOGEX 0, 0, 131, 54
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ƒQ[ƒ€‚Ì‘I‘ð"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
+FONT 12, "MS UI Gothic", 400, 0, 0x80
 BEGIN
-    LTEXT           "ƒQ[ƒ€”Ô†(&N)F",IDC_STATIC,7,9,51,8
+    LTEXT           "ƒQ[ƒ€”Ô†(&N)F",IDC_STATIC_GAMENUMBER,7,9,51,8
     EDITTEXT        IDC_EDIT_SEED,63,7,60,14,ES_AUTOHSCROLL | ES_NUMBER
     DEFPUSHBUTTON   "OK",IDOK,13,33,50,14
     PUSHBUTTON      "ƒLƒƒƒ“ƒZƒ‹",IDCANCEL,67,33,50,14
 END
 
 IDD_VERSION DIALOGEX 0, 0, 125, 53
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ƒo[ƒWƒ‡ƒ“î•ñ"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
+FONT 12, "MS UI Gothic", 400, 0, 0x80
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,37,32,50,14
-    ICON            IDI_ICON1,IDC_STATIC,7,7,20,20
-    LTEXT           "v1.0.4.0",IDC_STATIC,46,12,29,8
+    ICON            IDI_ICON1,IDC_STATIC,7,7,14,16
+    LTEXT           "v1.0.5.0",IDC_STATIC,46,12,29,8
 END
 
 IDD_HELP DIALOGEX 0, 0, 309, 176
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ƒwƒ‹ƒv"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
+FONT 12, "MS UI Gothic", 400, 0, 0x80
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,252,155,50,14
     EDITTEXT        IDC_EDIT_HELP,7,7,295,145,ES_MULTILINE | ES_READONLY | WS_VSCROLL
@@ -307,6 +333,57 @@ END
 #endif    // APSTUDIO_INVOKED
 
 #endif    // “ú–{Œê (“ú–{) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// ‰pŒê (ƒjƒ…[ƒgƒ‰ƒ‹) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "&Game"
+    BEGIN
+        MENUITEM "&New Game\tF2",               ID_NEW_GAME
+        MENUITEM "&Select Game...\tF3",         ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "&Undo\tCtrl+Z",               ID_UNDO
+        MENUITEM "&Redo\tCtrl+Y",               ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_EXIT
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Show &Help\tF1",              ID_HELP
+        MENUITEM "&Version Information",        ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_STRING424           "Help"
+    IDS_STRING425           "Select Game"
+    IDS_STRING426           "Game &Number:"
+    IDS_STRING427           "Cancel"
+    IDS_STRING428           "Version Information"
+    IDS_STRING429           "(How to Play)\r\nFreeCell is a solitaire card game played with a standard deck of 52 cards. The goal is to move all the cards into the four spaces at the top right, called the “Home Cells,” by following the rules below and making use of the four free spaces at the top left, called the “Free Cells.”\r\n\r\n(Rule 1)\r\nYou can drag the top card of any column with the mouse. However, you may only place it on the top card of another column if that card is of a different color (red or black) and exactly one rank higher.\r\n\r\n(Rule 2)\r\nUp to four cards can be placed freely in the Free Cells. A card placed in a Free Cell can be moved back to the top of a column if it meets the conditions of Rule 1.\r\n\r\n(Rule 3)\r\nIn the Home Cells, cards of each suit can be stacked in ascending order from Ace (1) to King (13)."
+END
+
+#endif    // ‰pŒê (ƒjƒ…[ƒgƒ‰ƒ‹) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

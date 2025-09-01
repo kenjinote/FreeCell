@@ -729,6 +729,19 @@ INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LP
 	switch (msg)
 	{
 	case WM_INITDIALOG:
+		{
+			WCHAR szTitle[256];
+			LoadString(GetModuleHandle(0), IDS_STRING425, szTitle, _countof(szTitle));
+			SetWindowText(hDlg, szTitle);
+
+			WCHAR szGameNumber[256];
+			LoadString(GetModuleHandle(0), IDS_STRING426, szGameNumber, _countof(szGameNumber));
+			SetDlgItemText(hDlg, IDC_STATIC_GAMENUMBER, szGameNumber);
+
+			WCHAR szCancel[256];
+			LoadString(GetModuleHandle(0), IDS_STRING427, szCancel, _countof(szCancel));
+			SetDlgItemText(hDlg, IDCANCEL, szCancel);
+		}
 		g = (Game*)lParam;
 		CenterWindow(hDlg);
 		SetDlgItemInt(hDlg, IDC_EDIT_SEED, (UINT)(rand() % 32000), FALSE);
@@ -755,6 +768,11 @@ INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARA
 	switch (msg)
 	{
 	case WM_INITDIALOG:
+		{
+			WCHAR szTitle[256];
+			LoadString(GetModuleHandle(0), IDS_STRING428, szTitle, _countof(szTitle));
+			SetWindowText(hDlg, szTitle);
+		}
 		g = (Game*)lParam;
 		CenterWindow(hDlg);
 		return TRUE;
@@ -775,15 +793,18 @@ INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM l
 	switch (msg)
 	{
 	case WM_INITDIALOG:
+		{
+			WCHAR szTitle[256];
+			LoadString(GetModuleHandle(0), IDS_STRING424, szTitle, _countof(szTitle));
+			SetWindowText(hDlg, szTitle);
+		}
 		g = (Game*)lParam;
 		CenterWindow(hDlg);
-		SetDlgItemText(hDlg, IDC_EDIT_HELP, L"【遊び方】\r\nフリーセルは、一人で遊ぶトランプゲームです。以下のルールに従い、"
-			L"ランダムに配置されたカードを左上の4つのフリーセルと呼ばれるスペースを活用して、52枚のすべてのカードを右上のホームセルと呼ばれる4つのスペースに移すのが目的です。\r\n"
-			L"\r\n\r\n"
-			L"ルール①\r\n列の先頭のカードをマウスドラッグして動かすことができる。ただし、移動元のカードは、移動先の先頭列のカードの色（赤または黒）が異なり、数字が1つ小さい場合のみ。\r\n\r\n"
-			L"ルール②\r\nフリーセルには４枚までカードを自由に置くことができる。また、フリーセルに置いたカードはルール①の条件を満たすとき列の先頭に移動できる。\r\n\r\n"
-			L"ルール③\r\nホームセルには、４種類のマークのカードをそれぞれ１から１３まで小さい順に重ねることができる。"
-		);
+		{
+			WCHAR szHelp[1024];
+			LoadString(GetModuleHandle(0), IDS_STRING429, szHelp, _countof(szHelp));
+			SetDlgItemText(hDlg, IDC_EDIT_HELP, szHelp);
+		}
 		return TRUE;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
@@ -1038,6 +1059,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
+	// 英語言語で起動
+	SetThreadUILanguage(MAKELANGID(LANG_ENGLISH, SUBLANG_NEUTRAL));
+
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	MSG msg = {};

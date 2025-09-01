@@ -61,9 +61,16 @@
 #define IDD_VERSION                     419
 #define IDI_ICON1                       420
 #define IDD_HELP                        422
+#define IDS_STRING424                   424
+#define IDS_STRING425                   425
+#define IDS_STRING426                   426
+#define IDS_STRING427                   427
+#define IDS_STRING428                   428
+#define IDS_STRING429                   429
 #define IDC_EDIT_SEED                   1001
 #define IDC_EDIT1                       1002
 #define IDC_EDIT_HELP                   1003
+#define IDC_STATIC_GAMENUMBER           1004
 #define ID_40001                        40001
 #define ID_40002                        40002
 #define ID_40003                        40003
@@ -82,9 +89,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        424
+#define _APS_NEXT_RESOURCE_VALUE        425
 #define _APS_NEXT_COMMAND_VALUE         40020
-#define _APS_NEXT_CONTROL_VALUE         1004
+#define _APS_NEXT_CONTROL_VALUE         1005
 #define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif
