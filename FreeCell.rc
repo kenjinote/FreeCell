@@ -57,6 +57,8 @@ BEGIN
     IDS_STRING427           "ƒLƒƒƒ“ƒZƒ‹"
     IDS_STRING428           "ƒo[ƒWƒ‡ƒ“î•ñ"
     IDS_STRING429           "y—V‚Ñ•ûz\r\nƒtƒŠ[ƒZƒ‹‚ÍAˆêl‚Å—V‚Ôƒgƒ‰ƒ“ƒvƒQ[ƒ€‚Å‚·BˆÈ‰º‚Ìƒ‹[ƒ‹‚É]‚¢Aƒ‰ƒ“ƒ_ƒ€‚É”z’u‚³‚ê‚½ƒJ[ƒh‚ğ¶ã‚Ì4‚Â‚ÌƒtƒŠ[ƒZƒ‹‚ÆŒÄ‚Î‚ê‚éƒXƒy[ƒX‚ğŠˆ—p‚µ‚ÄA52–‡‚Ì‚·‚×‚Ä‚ÌƒJ[ƒh‚ğ‰Eã‚Ìƒz[ƒ€ƒZƒ‹‚ÆŒÄ‚Î‚ê‚é4‚Â‚ÌƒXƒy[ƒX‚ÉˆÚ‚·‚Ì‚ª–Ú“I‚Å‚·B\r\n\r\n\r\nƒ‹[ƒ‹‡@\r\n—ñ‚Ìæ“ª‚ÌƒJ[ƒh‚ğƒ}ƒEƒXƒhƒ‰ƒbƒO‚µ‚Ä“®‚©‚·‚±‚Æ‚ª‚Å‚«‚éB‚½‚¾‚µAˆÚ“®Œ³‚ÌƒJ[ƒh‚ÍAˆÚ“®æ‚Ìæ“ª—ñ‚ÌƒJ[ƒh‚ÌFiÔ‚Ü‚½‚Í•j‚ªˆÙ‚È‚èA”š‚ª1‚Â¬‚³‚¢ê‡‚Ì‚İB\r\n\r\nƒ‹[ƒ‹‡A\r\nƒtƒŠ[ƒZƒ‹‚É‚Í‚S–‡‚Ü‚ÅƒJ[ƒh‚ğ©—R‚É’u‚­‚±‚Æ‚ª‚Å‚«‚éB‚Ü‚½AƒtƒŠ[ƒZƒ‹‚É’u‚¢‚½ƒJ[ƒh‚Íƒ‹[ƒ‹‡@‚ÌğŒ‚ğ–‚½‚·‚Æ‚«—ñ‚Ìæ“ª‚ÉˆÚ“®‚Å‚«‚éB\r\n\r\nƒ‹[ƒ‹‡B\r\nƒz[ƒ€ƒZƒ‹‚É‚ÍA‚Sí—Ş‚Ìƒ}[ƒN‚ÌƒJ[ƒh‚ğ‚»‚ê‚¼‚ê‚P‚©‚ç‚P‚R‚Ü‚Å¬‚³‚¢‡‚Éd‚Ë‚é‚±‚Æ‚ª‚Å‚«‚éB"
+    IDS_STRING430           "ƒtƒŠ[ƒZƒ‹"
+    IDS_STRING431           "ƒQ[ƒ€ƒNƒŠƒAI\n\n‚à‚¤ˆê“x‚â‚è‚Ü‚·‚©H"
 END
 
 #endif    // “ú–{Œê (ƒjƒ…[ƒgƒ‰ƒ‹) resources
@@ -191,7 +193,7 @@ CAPTION "ƒQ[ƒ€‚Ì‘I‘ğ"
 FONT 12, "MS UI Gothic", 400, 0, 0x80
 BEGIN
     LTEXT           "ƒQ[ƒ€”Ô†(&N)F",IDC_STATIC_GAMENUMBER,7,9,51,8
-    EDITTEXT        IDC_EDIT_SEED,63,7,60,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_EDIT_SEED,63,7,60,14,ES_AUTOHSCROLL
     DEFPUSHBUTTON   "OK",IDOK,13,33,50,14
     PUSHBUTTON      "ƒLƒƒƒ“ƒZƒ‹",IDCANCEL,67,33,50,14
 END
@@ -202,8 +204,8 @@ CAPTION "ƒo[ƒWƒ‡ƒ“î•ñ"
 FONT 12, "MS UI Gothic", 400, 0, 0x80
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,37,32,50,14
-    ICON            IDI_ICON1,IDC_STATIC,7,7,14,16
-    LTEXT           "v1.0.5.0",IDC_STATIC,46,12,29,8
+    ICON            IDI_ICON1,IDC_STATIC,7,7,20,20
+    LTEXT           "v1.0.6.0",IDC_STATIC,46,12,29,8
 END
 
 IDD_HELP DIALOGEX 0, 0, 309, 176
@@ -380,7 +382,9 @@ BEGIN
     IDS_STRING426           "Game &Number:"
     IDS_STRING427           "Cancel"
     IDS_STRING428           "Version Information"
-    IDS_STRING429           "(How to Play)\r\nFreeCell is a solitaire card game played with a standard deck of 52 cards. The goal is to move all the cards into the four spaces at the top right, called the “Home Cells,” by following the rules below and making use of the four free spaces at the top left, called the “Free Cells.”\r\n\r\n(Rule 1)\r\nYou can drag the top card of any column with the mouse. However, you may only place it on the top card of another column if that card is of a different color (red or black) and exactly one rank higher.\r\n\r\n(Rule 2)\r\nUp to four cards can be placed freely in the Free Cells. A card placed in a Free Cell can be moved back to the top of a column if it meets the conditions of Rule 1.\r\n\r\n(Rule 3)\r\nIn the Home Cells, cards of each suit can be stacked in ascending order from Ace (1) to King (13)."
+    IDS_STRING429           "(How to Play)\r\nFreeCell is a solitaire card game played with a standard deck of 52 cards. The goal is to move all the cards into the four spaces at the top right, called the “Home Cells,Eby following the rules below and making use of the four free spaces at the top left, called the “Free Cells.”\r\n\r\n(Rule 1)\r\nYou can drag the top card of any column with the mouse. However, you may only place it on the top card of another column if that card is of a different color (red or black) and exactly one rank higher.\r\n\r\n(Rule 2)\r\nUp to four cards can be placed freely in the Free Cells. A card placed in a Free Cell can be moved back to the top of a column if it meets the conditions of Rule 1.\r\n\r\n(Rule 3)\r\nIn the Home Cells, cards of each suit can be stacked in ascending order from Ace (1) to King (13)."
+    IDS_STRING430           "FreeCell"
+    IDS_STRING431           "Game Clear!\n\nDo you want to play again?"
 END
 
 #endif    // ‰pŒê (ƒjƒ…[ƒgƒ‰ƒ‹) resources

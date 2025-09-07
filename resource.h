@@ -67,6 +67,8 @@
 #define IDS_STRING427                   427
 #define IDS_STRING428                   428
 #define IDS_STRING429                   429
+#define IDS_STRING430                   430
+#define IDS_STRING431                   431
 #define IDC_EDIT_SEED                   1001
 #define IDC_EDIT1                       1002
 #define IDC_EDIT_HELP                   1003

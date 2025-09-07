@@ -21,7 +21,7 @@
 #include "resource.h"
 
 #define CLIENT_WIDTH (960)
-#define CLIENT_HEIGHT (600)
+#define CLIENT_HEIGHT (731)
 #define CARD_WIDTH (224.22508f)
 #define CARD_HEIGHT (312.80777f)
 #define CARD_SCALE (0.5f)
@@ -31,6 +31,7 @@
 #define ANIMATION_TIME (250)
 
 TCHAR szClassName[] = TEXT("FreeCell");
+HHOOK g_hHook;
 
 D3D_FEATURE_LEVEL featureLevels[] = {
 	D3D_FEATURE_LEVEL_11_1,
@@ -50,6 +51,24 @@ inline void SafeRelease(T*& p)
 		p->Release();
 		p = NULL;
 	}
+}
+
+LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	switch (nCode) {
+	case HCBT_ACTIVATE:
+		{
+			UnhookWindowsHookEx(g_hHook);
+			HWND hMes = (HWND)wParam;
+			HWND hParent = GetParent(hMes);
+			RECT m, w;
+			GetWindowRect(hMes, &m);
+			GetWindowRect(hParent, &w);
+			SetWindowPos(hMes, hParent, (w.right + w.left - m.right + m.left) / 2, (w.bottom + w.top - m.bottom + m.top) / 2, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+		}
+		break;
+	}
+	return 0;
 }
 
 double easeOutExpo(double t, double b, double c, double d)
@@ -366,6 +385,8 @@ public:
 	ULONGLONG animation_start_time;
 	std::vector<operation> buffer;
 	int generation = 0;
+	float m_sideMargin = 0.0f;
+	float m_columnPitch = 0.0f;
 	Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
 		this->hWnd = hWnd;
 		HRESULT hr = S_OK;
@@ -377,14 +398,25 @@ public:
 		}
 		if (SUCCEEDED(hr)) {
 			const int ids[] = {
-				IDR_SVG113,IDR_SVG111,IDR_SVG109,IDR_SVG107,IDR_SVG105,IDR_SVG103,IDR_SVG101,
-				IDR_SVG112,IDR_SVG110,IDR_SVG108,IDR_SVG106,IDR_SVG104,IDR_SVG102,IDR_SVG201,
-				IDR_SVG213,IDR_SVG211,IDR_SVG209,IDR_SVG207,IDR_SVG205,IDR_SVG203,IDR_SVG301,
-				IDR_SVG212,IDR_SVG210,IDR_SVG208,IDR_SVG206,IDR_SVG204,IDR_SVG202,IDR_SVG401,
-				IDR_SVG313,IDR_SVG311,IDR_SVG309,IDR_SVG307,IDR_SVG305,IDR_SVG303,
-				IDR_SVG312,IDR_SVG310,IDR_SVG308,IDR_SVG306,IDR_SVG304,IDR_SVG302,
-				IDR_SVG413,IDR_SVG411,IDR_SVG409,IDR_SVG407,IDR_SVG405,IDR_SVG403,
-				IDR_SVG412,IDR_SVG410,IDR_SVG408,IDR_SVG406,IDR_SVG404,IDR_SVG402,
+				// Clubs ♣
+				IDR_SVG301, IDR_SVG302, IDR_SVG303, IDR_SVG304, IDR_SVG305,
+				IDR_SVG306, IDR_SVG307, IDR_SVG308, IDR_SVG309, IDR_SVG310,
+				IDR_SVG311, IDR_SVG312, IDR_SVG313,
+
+				// Diamonds ♦
+				IDR_SVG401, IDR_SVG402, IDR_SVG403, IDR_SVG404, IDR_SVG405,
+				IDR_SVG406, IDR_SVG407, IDR_SVG408, IDR_SVG409, IDR_SVG410,
+				IDR_SVG411, IDR_SVG412, IDR_SVG413,
+
+				// Hearts ♥
+				IDR_SVG201, IDR_SVG202, IDR_SVG203, IDR_SVG204, IDR_SVG205,
+				IDR_SVG206, IDR_SVG207, IDR_SVG208, IDR_SVG209, IDR_SVG210,
+				IDR_SVG211, IDR_SVG212, IDR_SVG213,
+
+				// Spades ♠
+				IDR_SVG101, IDR_SVG102, IDR_SVG103, IDR_SVG104, IDR_SVG105,
+				IDR_SVG106, IDR_SVG107, IDR_SVG108, IDR_SVG109, IDR_SVG110,
+				IDR_SVG111, IDR_SVG112, IDR_SVG113
 			};
 			for (int i = 0; i < _countof(ids); i++) {
 				Card* p = new Card;
@@ -393,14 +425,23 @@ public:
 				pcard.push_back(p);
 			}
 		}
+		// 左右対称の余白を持つレイアウトを計算
+		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
+		// 元のレイアウトでの列から列までの間隔 (スロット幅)
+		float originalColumnPitch = CLIENT_WIDTH / 8.0f;
+		// 元のレイアウトでのカード間の隙間 (これが右の余白と等しい)
+		float gap = originalColumnPitch - cardWidthScaled;
+		m_sideMargin = gap; // カード間の隙間を左右の余白として設定
+		float totalPlayableWidth = CLIENT_WIDTH - 2 * m_sideMargin;
+		m_columnPitch = totalPlayableWidth / 8.0f;
 		for (int i = 0; i < _countof(board); i++) {
-			if (i < 8) {
-				board[i].x = CLIENT_WIDTH / 8.0f * i;
+			if (i < 8) { // 上段 (フリーセル, ホームセル)
+				board[i].x = m_sideMargin + m_columnPitch * i;
 				board[i].y = BOARD_OFFSET;
 				board[i].type = (i < 4) ? Board::freecell : Board::homecell;
 			}
-			else {
-				board[i].x = CLIENT_WIDTH / 8.0f * (i - 8);
+			else { // 下段 (テーブル)
+				board[i].x = m_sideMargin + m_columnPitch * (i - 8);
 				board[i].y = CARD_SCALE * CARD_HEIGHT + 2.0f * BOARD_OFFSET;
 				board[i].type = Board::tablecell;
 			}
@@ -414,7 +455,31 @@ public:
 		SafeRelease(selectBrush);
 		SafeRelease(emptyBrush);
 	}
-	void OnNewGame(unsigned int seed = -1) {
+	int GetBoardIndexFromPoint(int x, int y) {
+		// 左右の余白部分がクリックされた場合は無効(-1)とする
+		if (x < m_sideMargin || x >= CLIENT_WIDTH - m_sideMargin) {
+			return -1;
+		}
+
+		// X座標から列番号(0-7)を計算
+		int columnIndex = static_cast<int>((x - m_sideMargin) / m_columnPitch);
+
+		// 念のため範囲内に収める
+		if (columnIndex < 0) columnIndex = 0;
+		if (columnIndex > 7) columnIndex = 7;
+
+		// Y座標から上段か下段かを判断し、最終的なボード番号を返す
+		bool isBottomRow = (y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET);
+		return columnIndex + (isBottomRow ? 8 : 0);
+	}
+	void OnNewGame(long gameNumber) {
+		{
+			WCHAR szTitle[256];
+			WCHAR szAppName[256];
+			LoadString(NULL, IDS_STRING430, szAppName, _countof(szAppName));
+			wsprintf(szTitle, TEXT("%s #%ld"), szAppName, gameNumber);
+			SetWindowTextW(hWnd, szTitle);
+		}
 		UnSelectAll();
 		UnDragAll();
 		for (auto& i : board) {
@@ -422,24 +487,74 @@ public:
 		};
 		generation = 0;
 		buffer.clear();
-		std::vector<Card*> temp(pcard.begin(), pcard.end());
-		std::random_device rd;
-		std::mt19937 generator(seed == -1 ? rd() : seed);
-		std::shuffle(temp.begin(), temp.end(), generator);
-		for (auto &c : pcard) {
+		for (auto& c : pcard) {
 			c->x = CLIENT_WIDTH / 2.0f - c->scale * c->width / 2.0f;
 			c->y = CLIENT_HEIGHT;
 		}
 		InvalidateRect(hWnd, 0, 0);
 		UpdateWindow(hWnd);
-		int count[] = { 7, 7, 7, 7, 6, 6, 6, 6 };
-		int index = 0;
-		for (auto &c : pcard) {
-			int delay = 20 * index;
-			AnimationStart(delay);
-			board[8 + index % 8].push_back(temp[index], delay);
-			index++;
+		ULONGLONG total_delay = 0;
+		if (gameNumber == -1 || gameNumber == -2) {
+			std::vector<Card*> base_deck(pcard.begin(), pcard.end());
+			ULONGLONG delay = 0;
+			if (gameNumber == -1) {
+				const int odd_ranks[] = { 0, 2, 4, 6, 8, 10, 12 };
+				const int even_ranks[] = { 11, 9, 7, 5, 3, 1 };
+				for (int i = 0; i < 4; ++i) {
+					for (int rank_idx : odd_ranks) {
+						board[8 + i].push_back(base_deck[i * 13 + rank_idx], delay);
+						delay += 20;
+					}
+				}
+				for (int i = 0; i < 4; ++i) {
+					for (int rank_idx : even_ranks) {
+						board[12 + i].push_back(base_deck[i * 13 + rank_idx], delay);
+						delay += 20;
+					}
+				}
+			}
+			else {
+				for (int suit = 0; suit < 4; ++suit) {
+					for (int rank = 12; rank >= 0; --rank) {
+						board[8 + suit].push_back(base_deck[suit * 13 + rank], delay);
+						delay += 20;
+					}
+				}
+			}
+			total_delay = (delay > 0) ? (delay - 20) : 0; // 最後のカードの遅延時間を記録
 		}
+		else {
+			long holdrand = (long)gameNumber;
+			std::vector<int> card_indices(52);
+			for (int i = 0; i < 52; i++) card_indices[i] = 51 - i;
+			for (int i = 0; i < 51; i++) {
+				holdrand = holdrand * 214013L + 2531011L;
+				int r = (holdrand >> 16) & 0x7fff;
+				int j = 51 - r % (52 - i);
+				std::swap(card_indices[i], card_indices[j]);
+			}
+			std::vector<Card*> base_deck(pcard.begin(), pcard.end());
+			std::vector<Card*> sorted_base_deck(52);
+			for (int rank = 0; rank < 13; ++rank) {
+				for (int suit = 0; suit < 4; ++suit) {
+					int from_index = suit * 13 + rank;
+					int to_index = rank * 4 + suit;
+					sorted_base_deck[to_index] = base_deck[from_index];
+				}
+			}
+			std::vector<Card*> deck(52);
+			for (int i = 0; i < 52; i++) deck[i] = sorted_base_deck[card_indices[i]];
+
+			ULONGLONG delay = 0;
+			for (int i = 0; i < 52; i++) {
+				board[8 + i % 8].push_back(deck[i], delay);
+				delay += 20;
+			}
+			total_delay = (delay > 0) ? (delay - 20) : 0; // 最後のカードの遅延時間を記録
+		}
+
+		// --- 3. 共通の後処理 ---
+		AnimationStart(total_delay); // 全てのアニメーションをカバーするタイマーを開始
 		SetCanDragCard();
 	}
 	void UnSelectAll() {
@@ -503,14 +618,20 @@ public:
 		return TRUE;
 	}
 	void AskNewGame() {
-		if (MessageBox(hWnd, L"ゲームクリア!\n\nもう一度やりますか？", L"確認", MB_YESNOCANCEL) == IDYES) {
+		WCHAR szPrompt[256];
+		LoadString(GetModuleHandle(0), IDS_STRING431, szPrompt, _countof(szPrompt));
+		WCHAR szTitle[128];
+		LoadString(GetModuleHandle(0), IDS_STRING430, szTitle, _countof(szTitle));
+		g_hHook = SetWindowsHookEx(WH_CBT, CBTProc, NULL, GetCurrentThreadId());
+		if (MessageBox(hWnd, szPrompt, szTitle, MB_YESNOCANCEL) == IDYES) {
 			SendMessage(hWnd, WM_COMMAND, ID_NEW_GAME, 0);
 		}
 	}
 	void OnLButtonDoubleClick(int x, int y) {
 		UnSelectAll();
 		UnDragAll();
-		int from_board_no = x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
+		int from_board_no = GetBoardIndexFromPoint(x, y);
+		if (from_board_no < 0) return; // 余白クリックは無視
 		if (4 <= from_board_no && from_board_no < 8) return; // freecellのクリックは無視
 		if (board[from_board_no].size() > 0) {
 			Card* p = board[from_board_no].back();
@@ -537,7 +658,8 @@ public:
 	void OnLButtonDown(int x, int y) {
 		UnSelectAll();
 		UnDragAll();
-		int board_no = x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
+		int board_no = GetBoardIndexFromPoint(x, y);
+		if (board_no < 0) return; // 余白クリックは無視
 		board[board_no].GetCardListFromPos((float)x, (float)y, dragcard);
 		if (dragcard.size() > 0) {
 			for (auto card : dragcard) {
@@ -574,11 +696,12 @@ public:
 		if (dragcard.size() > 0) {
 			ReleaseCapture();
 			Card* back = dragcard.back();
-			int x = (int)(back->x + back->scale * back->width / 2.0f); // マウスカーソルの位置ではなくカードの中心点で対象ボードを判定
-			int y = (int)(back->y + back->scale * back->height / 2.0f);
-			int to_board_no = (int)x / (CLIENT_WIDTH / 8) + ((y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET) ? 8 : 0);
+			int card_center_x = static_cast<int>(back->x + back->scale * back->width / 2.0f);
+			int card_center_y = static_cast<int>(back->y + back->scale * back->height / 2.0f);
+			int to_board_no = GetBoardIndexFromPoint(card_center_x, card_center_y);
 			if (
 				to_board_no != from_board_no &&
+				to_board_no >= 0 && // 余白へのドロップは無効
 				(to_board_no >= 8 || dragcard.size() == 1) &&
 				CanDrop(dragcard[0]->no, to_board_no) &&
 				dragcard.size() <= GetSpaceCount() + 1)
@@ -750,7 +873,7 @@ INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LP
 		if (LOWORD(wParam) == IDOK)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			unsigned int seed = GetDlgItemInt(hDlg, IDC_EDIT_SEED, NULL, FALSE);
+			int seed = GetDlgItemInt(hDlg, IDC_EDIT_SEED, NULL, TRUE);
 			g->OnNewGame(seed);
 			return TRUE;
 		} else if (LOWORD(wParam) == IDCANCEL) {
@@ -1002,7 +1125,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case ID_NEW_GAME:
-			g->OnNewGame();
+			{
+				long randomGameNumber = rand() % 32000 + 1;
+				g->OnNewGame(randomGameNumber);
+			}
 			break;
 		case ID_SELECT_GAME:
 			DialogBoxParam(GetModuleHandle(0), MAKEINTRESOURCE(IDD_SELECT_GAME), hWnd, SelectGameDialogProc, (LPARAM)g);
@@ -1061,18 +1187,17 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 {
 	// 英語言語で起動
 	//SetThreadUILanguage(MAKELANGID(LANG_ENGLISH, SUBLANG_NEUTRAL));
-
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	srand((unsigned int)time(NULL));
 	MSG msg = {};
 	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1)), LoadCursor(0,IDC_ARROW), 0, MAKEINTRESOURCE(IDR_MENU1), szClassName};
 	RegisterClass(&wndclass);
 	RECT rect = {0, 0, CLIENT_WIDTH, CLIENT_HEIGHT};
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	AdjustWindowRect(&rect, dwStyle, FALSE);
-	HWND hWnd = CreateWindow(szClassName, TEXT("FreeCell"), dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
+	HWND hWnd = CreateWindow(szClassName, 0, dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
 	UpdateWindow(hWnd);
 	HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
