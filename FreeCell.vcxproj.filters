@@ -257,5 +257,11 @@
     <Image Include="icon1.ico">
       <Filter>リソース ファイル</Filter>
     </Image>
+    <Image Include="king_smile.png">
+      <Filter>リソース ファイル</Filter>
+    </Image>
+    <Image Include="king_laugh.png">
+      <Filter>リソース ファイル</Filter>
+    </Image>
   </ItemGroup>
 </Project>

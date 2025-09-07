@@ -1,0 +1,469 @@
+﻿// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 (ニュートラル) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+LANGUAGE LANG_JAPANESE, SUBLANG_NEUTRAL
+#pragma code_page(932)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "ゲーム(&G)"
+    BEGIN
+        MENUITEM "新しいゲーム(&N)\tF2",              ID_NEW_GAME
+        MENUITEM "ゲームの選択(&S)...\tF3",           ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "元に戻す(&U)\tCtrl+Z",            ID_UNDO
+        MENUITEM "やり直す(&R)\tCtrl+Y",            ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "終了(&X)\tAlt+F4",              ID_EXIT
+    END
+    POPUP "ヘルプ(&H)"
+    BEGIN
+        MENUITEM "ヘルプの表示(&H)\tF1",              ID_HELP
+        MENUITEM "バージョン情報(&A)",                 ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_STRING424           "ヘルプ"
+    IDS_STRING425           "ゲームの選択"
+    IDS_STRING426           "ゲーム番号(&N):"
+    IDS_STRING427           "キャンセル"
+    IDS_STRING428           "バージョン情報"
+    IDS_STRING429           "【遊び方】\r\nフリーセルは、一人で遊ぶトランプゲームです。以下のルールに従い、ランダムに配置されたカードを左上の4つのフリーセルと呼ばれるスペースを活用して、52枚のすべてのカードを右上のホームセルと呼ばれる4つのスペースに移すのが目的です。\r\n\r\n\r\nルール①\r\n列の先頭のカードをマウスドラッグして動かすことができる。ただし、移動元のカードは、移動先の先頭列のカードの色（赤または黒）が異なり、数字が1つ小さい場合のみ。\r\n\r\nルール②\r\nフリーセルには４枚までカードを自由に置くことができる。また、フリーセルに置いたカードはルール①の条件を満たすとき列の先頭に移動できる。\r\n\r\nルール③\r\nホームセルには、４種類のマークのカードをそれぞれ１から１３まで小さい順に重ねることができる。"
+    IDS_STRING430           "フリーセル"
+    IDS_STRING431           "ゲームクリア！\n\nもう一度やりますか？"
+END
+
+#endif    // 日本語 (ニュートラル) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// ニュートラル (既定) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
+#pragma code_page(932)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// SVG
+//
+
+IDR_SVG101              SVG                     "cards\\1S.svg"
+
+IDR_SVG102              SVG                     "cards\\2S.svg"
+
+IDR_SVG103              SVG                     "cards\\3S.svg"
+
+IDR_SVG104              SVG                     "cards\\4S.svg"
+
+IDR_SVG105              SVG                     "cards\\5S.svg"
+
+IDR_SVG106              SVG                     "cards\\6S.svg"
+
+IDR_SVG107              SVG                     "cards\\7S.svg"
+
+IDR_SVG108              SVG                     "cards\\8S.svg"
+
+IDR_SVG109              SVG                     "cards\\9S.svg"
+
+IDR_SVG110              SVG                     "cards\\10S.svg"
+
+IDR_SVG111              SVG                     "cards\\11S.svg"
+
+IDR_SVG112              SVG                     "cards\\12S.svg"
+
+IDR_SVG113              SVG                     "cards\\13S.svg"
+
+IDR_SVG201              SVG                     "cards\\1H.svg"
+
+IDR_SVG202              SVG                     "cards\\2H.svg"
+
+IDR_SVG203              SVG                     "cards\\3H.svg"
+
+IDR_SVG204              SVG                     "cards\\4H.svg"
+
+IDR_SVG205              SVG                     "cards\\5H.svg"
+
+IDR_SVG206              SVG                     "cards\\6H.svg"
+
+IDR_SVG207              SVG                     "cards\\7H.svg"
+
+IDR_SVG208              SVG                     "cards\\8H.svg"
+
+IDR_SVG209              SVG                     "cards\\9H.svg"
+
+IDR_SVG210              SVG                     "cards\\10H.svg"
+
+IDR_SVG211              SVG                     "cards\\11H.svg"
+
+IDR_SVG212              SVG                     "cards\\12H.svg"
+
+IDR_SVG213              SVG                     "cards\\13H.svg"
+
+IDR_SVG301              SVG                     "cards\\1C.svg"
+
+IDR_SVG302              SVG                     "cards\\2C.svg"
+
+IDR_SVG303              SVG                     "cards\\3C.svg"
+
+IDR_SVG304              SVG                     "cards\\4C.svg"
+
+IDR_SVG305              SVG                     "cards\\5C.svg"
+
+IDR_SVG306              SVG                     "cards\\6C.svg"
+
+IDR_SVG307              SVG                     "cards\\7C.svg"
+
+IDR_SVG308              SVG                     "cards\\8C.svg"
+
+IDR_SVG309              SVG                     "cards\\9C.svg"
+
+IDR_SVG310              SVG                     "cards\\10C.svg"
+
+IDR_SVG311              SVG                     "cards\\11C.svg"
+
+IDR_SVG312              SVG                     "cards\\12C.svg"
+
+IDR_SVG313              SVG                     "cards\\13C.svg"
+
+IDR_SVG401              SVG                     "cards\\1D.svg"
+
+IDR_SVG402              SVG                     "cards\\2D.svg"
+
+IDR_SVG403              SVG                     "cards\\3D.svg"
+
+IDR_SVG404              SVG                     "cards\\4D.svg"
+
+IDR_SVG405              SVG                     "cards\\5D.svg"
+
+IDR_SVG406              SVG                     "cards\\6D.svg"
+
+IDR_SVG407              SVG                     "cards\\7D.svg"
+
+IDR_SVG408              SVG                     "cards\\8D.svg"
+
+IDR_SVG409              SVG                     "cards\\9D.svg"
+
+IDR_SVG410              SVG                     "cards\\10D.svg"
+
+IDR_SVG411              SVG                     "cards\\11D.svg"
+
+IDR_SVG412              SVG                     "cards\\12D.svg"
+
+IDR_SVG413              SVG                     "cards\\13D.svg"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SELECT_GAME DIALOGEX 0, 0, 131, 54
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ゲームの選択"
+FONT 12, "MS UI Gothic", 400, 0, 0x80
+BEGIN
+    LTEXT           "ゲーム番号(&N)：",IDC_STATIC_GAMENUMBER,7,9,51,8
+    EDITTEXT        IDC_EDIT_SEED,63,7,60,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,13,33,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,67,33,50,14
+END
+
+IDD_VERSION DIALOGEX 0, 0, 175, 74
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "バージョン情報"
+FONT 12, "MS UI Gothic", 400, 0, 0x80
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,62,53,50,14
+    ICON            IDI_ICON1,IDC_STATIC,7,7,20,20
+    LTEXT           "v1.0.6",IDC_STATIC_VERSION,37,20,133,8
+    LTEXT           "フリーセル",IDC_STATIC_APP_NAME,37,7,133,8
+    LTEXT           "Copyright 2025 Kenji All rights reserved.",IDC_STATIC_COPYRIGHT,37,34,133,8
+END
+
+IDD_HELP DIALOGEX 0, 0, 309, 176
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ヘルプ"
+FONT 12, "MS UI Gothic", 400, 0, 0x80
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,252,155,50,14
+    EDITTEXT        IDC_EDIT_HELP,62,7,240,145,ES_MULTILINE | ES_READONLY | WS_VSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ACCELERATOR1 ACCELERATORS
+BEGIN
+    VK_F2,          ID_NEW_GAME,            VIRTKEY, NOINVERT
+    VK_F3,          ID_SELECT_GAME,         VIRTKEY, NOINVERT
+    "Z",            ID_UNDO,                VIRTKEY, CONTROL, NOINVERT
+    "Y",            ID_REDO,                VIRTKEY, CONTROL, NOINVERT
+    VK_F1,          ID_HELP,                VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SELECT_GAME, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 124
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 47
+    END
+
+    IDD_VERSION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 168
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 67
+    END
+
+    IDD_HELP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 169
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_SELECT_GAME AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_VERSION AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_HELP AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "icon1.ico"
+
+#endif    // ニュートラル (既定) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 (日本) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// PNG
+//
+
+IDB_PNG1                PNG                     "king_smile.png"
+
+IDB_PNG2                PNG                     "king_laugh.png"
+
+#endif    // 日本語 (日本) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 韓国語 (ニュートラル) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)
+LANGUAGE LANG_KOREAN, SUBLANG_NEUTRAL
+#pragma code_page(949)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "&Game"
+    BEGIN
+        MENUITEM "&New Game\tF2",               ID_NEW_GAME
+        MENUITEM "&Select Game...\tF3",         ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "&Undo\tCtrl+Z",               ID_UNDO
+        MENUITEM "&Redo\tCtrl+Y",               ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_EXIT
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Show &Help\tF1",              ID_HELP
+        MENUITEM "&Version Information",        ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_STRING424           "ｵｵｿｻ"
+    IDS_STRING425           "ｰﾔﾀﾓ ｼｱﾅﾃ"
+    IDS_STRING426           "ｰﾔﾀﾓ ｹ｣(&N):"
+    IDS_STRING427           "ﾃ・ﾒ"
+    IDS_STRING428           "ｹ・ﾁ､ｺｸ"
+    IDS_STRING429           "(ｰﾔﾀﾓ ｹ貉)\r\nﾇﾁｸｮｼｿﾀｺ 52ﾀ蠡ﾇ ﾇ･ﾁﾘ ﾄｫｵ蟶ｦ ｻ鄙・ﾏｴﾂ 1ﾀﾎｿ・ﾄｫｵ・ｰﾔﾀﾓﾀﾔｴﾏｴﾙ. ｰﾔﾀﾓﾀﾇ ｸ･ｴﾂ ｿﾞﾂﾊ ｻﾜｿ｡ ﾀﾖｴﾂ 4ｰｳﾀﾇ ｺ・ｰ｣, 'ﾇﾁｸｮｼｿ(Free Cells)'ﾀｻ ﾈｰｿ・ﾏｰ・ｾﾆｷ｡ ｱﾔﾄ｢ｿ｡ ｵ郞・ ｿﾀｸ･ﾂﾊ ｻﾜｿ｡ ﾀﾖｴﾂ 4ｰｳﾀﾇ ｰ｣, 'ﾈｨｼｿ(Home Cells)'ﾀｸｷﾎ ｸ・ﾄｫｵ蟶ｦ ｿﾅｱ箒ﾂ ｰﾍﾀﾔｴﾏｴﾙ.\r\n\r\n(ｱﾔﾄ｢ 1)\r\nｰ｢ ｿｭﾀﾇ ｸﾇ ﾀｧ ﾄｫｵ蟠ﾂ ｸｶｿ・ｺｷﾎ ｵ蟾｡ｱﾗﾇﾒ ｼ・ﾀﾖｽﾀｴﾏｴﾙ. ﾇﾏﾁｸ ｵ蟾｡ｱﾗﾇﾑ ﾄｫｵ蟶ｦ ｴﾙｸ･ ｿｭﾀﾇ ｸﾇ ﾀｧｷﾎ ｿﾅｱ箙ﾁｸ・ ｿﾅｰﾜｰ･ ｰﾇ ﾄｫｵ蟆｡ ｻﾌ ｴﾙｸ｣ｰ・ｻ｡ｰ｣ｻ・ｰﾋﾀｺｻ・ ｼﾀﾚｰ｡ ｹﾙｷﾎ ﾇﾏｳｪ ｴ・ｳﾆｾﾟ ﾇﾕｴﾏｴﾙ.\r\n\r\n(ｱﾔﾄ｢ 2)\r\nﾇﾁｸｮｼｿｿ｡ｴﾂ ﾄｫｵ蟶ｦ ﾃﾖｴ・4ﾀ螻錝・ﾀﾚﾀｯｷﾓｰﾔ ｳｻ ｼ・ﾀﾖｽﾀｴﾏｴﾙ. ﾇﾁｸｮｼｿｿ｡ ｳﾎ ﾄｫｵ蟠ﾂ ｱﾔﾄ｢ 1ﾀﾇ ﾁｶｰﾇﾀｻ ｸｸﾁｷﾇﾒ ｰ豼・ ｴﾙｽﾃ ｿｭﾀﾇ ｸﾇ ﾀｧｷﾎ ｿﾅｱ・ｼ・ﾀﾖｽﾀｴﾏｴﾙ.\r\n\r\n(ｱﾔﾄ｢ 3)\r\nﾈｨｼｿｿ｡ｴﾂ ｰ｢ ｹｫｴﾌｺｰｷﾎ ﾄｫｵ蟶ｦ ｿ｡ﾀﾌｽｺ(A)ｺﾎﾅﾍ ﾅｷ(K)ｱ錝・ｼｭｴ・ﾎ ｽﾗﾀｻ ｼ・ﾀﾖｽﾀｴﾏｴﾙ."
+    IDS_STRING430           "ﾇﾁｸｮｼｿ"
+    IDS_STRING431           "ｰﾔﾀﾓ ﾅｬｸｮｾ・\r\n\r\nｴﾙｽﾃ ｽﾃﾀﾛﾇﾏｽﾃｰﾚｽﾀｴﾏｱ・"
+END
+
+#endif    // 韓国語 (ニュートラル) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 英語 (ニュートラル) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU
+BEGIN
+    POPUP "&Game"
+    BEGIN
+        MENUITEM "&New Game\tF2",               ID_NEW_GAME
+        MENUITEM "&Select Game...\tF3",         ID_SELECT_GAME
+        MENUITEM SEPARATOR
+        MENUITEM "&Undo\tCtrl+Z",               ID_UNDO
+        MENUITEM "&Redo\tCtrl+Y",               ID_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_EXIT
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Show &Help\tF1",              ID_HELP
+        MENUITEM "&Version Information",        ID_VERSION
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_STRING424           "Help"
+    IDS_STRING425           "Select Game"
+    IDS_STRING426           "Game &Number:"
+    IDS_STRING427           "Cancel"
+    IDS_STRING428           "Version Information"
+    IDS_STRING429           "(How to Play)\r\nFreeCell is a solitaire card game played with a standard deck of 52 cards. The goal is to move all the cards into the four spaces at the top right, called the 滴ome Cells,・by following the rules below and making use of the four free spaces at the top left, called the 擢ree Cells.能r\n\r\n(Rule 1)\r\nYou can drag the top card of any column with the mouse. However, you may only place it on the top card of another column if that card is of a different color (red or black) and exactly one rank higher.\r\n\r\n(Rule 2)\r\nUp to four cards can be placed freely in the Free Cells. A card placed in a Free Cell can be moved back to the top of a column if it meets the conditions of Rule 1.\r\n\r\n(Rule 3)\r\nIn the Home Cells, cards of each suit can be stacked in ascending order from Ace (1) to King (13)."
+    IDS_STRING430           "FreeCell"
+    IDS_STRING431           "Game Clear!\n\nDo you want to play again?"
+END
+
+#endif    // 英語 (ニュートラル) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

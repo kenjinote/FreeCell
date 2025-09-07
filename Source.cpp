@@ -4,6 +4,7 @@
 #pragma comment(lib,"d2d1")
 #pragma comment(lib,"dxgi")
 #pragma comment(lib,"dxguid")
+#pragma comment(lib,"gdiplus")
 
 #include <list>
 #include <vector>
@@ -18,6 +19,7 @@
 #include <d2d1_1helper.h>
 #include <d3d11_1.h>
 #include <dxgi1_6.h>
+#include <gdiplus.h>
 #include "resource.h"
 
 #define CLIENT_WIDTH (960)
@@ -29,6 +31,8 @@
 #define BOARD_OFFSET (10.0f)
 #define NOT_FOUND (-1)
 #define ANIMATION_TIME (250)
+
+using namespace Gdiplus;
 
 TCHAR szClassName[] = TEXT("FreeCell");
 HHOOK g_hHook;
@@ -57,16 +61,16 @@ LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	switch (nCode) {
 	case HCBT_ACTIVATE:
-		{
-			UnhookWindowsHookEx(g_hHook);
-			HWND hMes = (HWND)wParam;
-			HWND hParent = GetParent(hMes);
-			RECT m, w;
-			GetWindowRect(hMes, &m);
-			GetWindowRect(hParent, &w);
-			SetWindowPos(hMes, hParent, (w.right + w.left - m.right + m.left) / 2, (w.bottom + w.top - m.bottom + m.top) / 2, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-		}
-		break;
+	{
+		UnhookWindowsHookEx(g_hHook);
+		HWND hMes = (HWND)wParam;
+		HWND hParent = GetParent(hMes);
+		RECT m, w;
+		GetWindowRect(hMes, &m);
+		GetWindowRect(hParent, &w);
+		SetWindowPos(hMes, hParent, (w.right + w.left - m.right + m.left) / 2, (w.bottom + w.top - m.bottom + m.top) / 2, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	}
+	break;
 	}
 	return 0;
 }
@@ -97,7 +101,7 @@ public:
 	float offset_x = 0;
 	float offset_y = 0;
 	ULONGLONG animation_start_time = 0;
-	void Draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1Brush * brush) {
+	void Draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1Brush* brush) {
 		if (!d2dDeviceContext) return;
 		if (!bVisible) return;
 
@@ -377,6 +381,8 @@ class Game {
 public:
 	ID2D1SolidColorBrush* selectBrush = NULL;
 	ID2D1SolidColorBrush* emptyBrush = NULL;
+	ID2D1Bitmap* m_pClearImage = NULL; // ★追加：クリア画像用ビットマップ
+	BOOL m_bGameClear = FALSE;         // ★追加：ゲームクリアフラグ
 	std::list<Card*> pcard;
 	std::vector<Card*> dragcard;
 	Board board[16];
@@ -395,6 +401,11 @@ public:
 		}
 		if (SUCCEEDED(hr)) {
 			hr = d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.0F, 0.0F, 0.0F, 0.5F), &emptyBrush);
+		}
+		if (SUCCEEDED(hr)) {
+			// ★追加：クリア画像をリソースから読み込む
+			// ※ resource.h に IDB_PNG1 が定義されている必要があります
+			LoadResourcePng(d2dDeviceContext, MAKEINTRESOURCE(IDB_PNG2), &m_pClearImage);
 		}
 		if (SUCCEEDED(hr)) {
 			const int ids[] = {
@@ -454,6 +465,7 @@ public:
 		}
 		SafeRelease(selectBrush);
 		SafeRelease(emptyBrush);
+		SafeRelease(m_pClearImage); // ★追加：ビットマップの解放
 	}
 	int GetBoardIndexFromPoint(int x, int y) {
 		// 左右の余白部分がクリックされた場合は無効(-1)とする
@@ -480,6 +492,7 @@ public:
 			wsprintf(szTitle, TEXT("%s #%ld"), szAppName, gameNumber);
 			SetWindowTextW(hWnd, szTitle);
 		}
+		m_bGameClear = FALSE; // ★追加：クリアフラグをリセット
 		UnSelectAll();
 		UnDragAll();
 		for (auto& i : board) {
@@ -593,9 +606,49 @@ public:
 		for (auto& i : dragcard) {
 			i->Draw(d2dDeviceContext, selectBrush);
 		}
+		// ★追加：ゲームクリア時に画像を描画
+		if (m_bGameClear && m_pClearImage)
+		{
+			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			D2D1_SIZE_F size = m_pClearImage->GetSize();
+
+			// 描画先の矩形を定義します (左上の座標と右下の座標)
+			D2D1_RECT_F destinationRect = D2D1::RectF(
+				0,
+				CLIENT_HEIGHT - 28,
+				size.width / 2.0f,
+				CLIENT_HEIGHT - 28 - size.height /2.0f
+			);
+
+			// ソース画像全体を指定する矩形を定義します
+			D2D1_RECT_F sourceRect = D2D1::RectF(0.0f, 0.0f, size.width, size.height);
+
+			// ソース矩形全体を、指定した描画先矩形に描画します
+			// このオーバーロードを使用することで、画像が切れる問題を防ぎます。
+			d2dDeviceContext->DrawBitmap(
+				m_pClearImage,
+				&destinationRect,
+				1.0f, // Opacity
+				D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+				&sourceRect
+			);
+		}
+		//{
+		//	d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+		//	D2D1_SIZE_F size = m_pClearImage->GetSize();
+		//	d2dDeviceContext->DrawBitmap(
+		//		m_pClearImage,
+		//		D2D1::RectF(
+		//			BOARD_OFFSET,                       // x (左)
+		//			CLIENT_HEIGHT - size.height / 2.0f - 2.0f * BOARD_OFFSET, // y (上)
+		//			BOARD_OFFSET + size.width / 2.0f,          // x (右)
+		//			CLIENT_HEIGHT - 2.0f * BOARD_OFFSET        // y (下)
+		//		)
+		//	);
+		//}
 	}
 	int CanHome(int card_no) {
-		for (int i = 4; i < 8; i++) {			
+		for (int i = 4; i < 8; i++) {
 			if (board[i].canpush(card_no)) {
 				return i;
 			}
@@ -647,6 +700,7 @@ public:
 				SetCanDragCard();
 				InvalidateRect(hWnd, 0, 0);
 				if (IsGameClear()) {
+					m_bGameClear = TRUE; // ★追加
 					AskNewGame();
 				}
 				else {
@@ -712,11 +766,12 @@ public:
 					board[to_board_no].push_back(card);
 				}
 				board[from_board_no].resize(board[from_board_no].size() - dragcard.size()); //元の列から要素消す
-				operation op = {(byte)from_board_no, (byte)to_board_no, (byte)dragcard.size() };
+				operation op = { (byte)from_board_no, (byte)to_board_no, (byte)dragcard.size() };
 				Operation(op);
 				UnSelectAll();
 				SetCanDragCard();
 				if (IsGameClear()) {
+					m_bGameClear = TRUE; // ★追加
 					AskNewGame();
 				}
 				else {
@@ -753,7 +808,7 @@ public:
 		}
 		return nCount;
 	}
-	void Operation(operation & op) {
+	void Operation(operation& op) {
 		if (generation == buffer.size()) {
 			buffer.push_back(op);
 		}
@@ -767,7 +822,7 @@ public:
 		if (generation <= 0) return;
 		byte from_board_no = buffer[generation - 1].from_board_no;
 		byte to_board_no = buffer[generation - 1].to_board_no;
-		byte card_count = buffer[generation - 1].card_count;		
+		byte card_count = buffer[generation - 1].card_count;
 		board[to_board_no].GetCardListFromCount(card_count, dragcard);
 		SetActiveBoard(from_board_no);
 		for (auto card : dragcard) {
@@ -811,6 +866,7 @@ public:
 							UnSelectAll();
 							SetCanDragCard();
 							if (IsGameClear()) {
+								m_bGameClear = TRUE; // ★追加
 								AskNewGame();
 								return;
 							}
@@ -826,6 +882,85 @@ public:
 				break;
 			}
 		}
+	}
+private:
+	// ★追加：リソースからPNGを読み込みID2D1Bitmapを作成するヘルパー関数
+	HRESULT LoadResourcePng(
+		ID2D1DeviceContext* pRenderTarget,
+		PCWSTR resourceName,
+		ID2D1Bitmap** ppBitmap
+	)
+	{
+		HRESULT hr = S_OK;
+		IWICImagingFactory* pIWICFactory = NULL;
+		IWICBitmapDecoder* pDecoder = NULL;
+		IWICBitmapFrameDecode* pSource = NULL;
+		IWICStream* pStream = NULL;
+		IWICFormatConverter* pConverter = NULL;
+
+		HRSRC imageResHandle = NULL;
+		HGLOBAL imageResDataHandle = NULL;
+		void* pImageFile = NULL;
+		DWORD imageFileSize = 0;
+
+		// WIC Factoryを作成
+		hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICFactory));
+		if (FAILED(hr)) return hr;
+
+		imageResHandle = FindResource(NULL, resourceName, L"PNG");
+		hr = imageResHandle ? S_OK : E_FAIL;
+
+		if (SUCCEEDED(hr))
+		{
+			imageResDataHandle = LoadResource(NULL, imageResHandle);
+			hr = imageResDataHandle ? S_OK : E_FAIL;
+		}
+		if (SUCCEEDED(hr))
+		{
+			pImageFile = LockResource(imageResDataHandle);
+			hr = pImageFile ? S_OK : E_FAIL;
+		}
+		if (SUCCEEDED(hr))
+		{
+			imageFileSize = SizeofResource(NULL, imageResHandle);
+			hr = imageFileSize ? S_OK : E_FAIL;
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pIWICFactory->CreateStream(&pStream);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pStream->InitializeFromMemory(reinterpret_cast<BYTE*>(pImageFile), imageFileSize);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnLoad, &pDecoder);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pDecoder->GetFrame(0, &pSource);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pIWICFactory->CreateFormatConverter(&pConverter);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pConverter->Initialize(pSource, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.f, WICBitmapPaletteTypeMedianCut);
+		}
+		if (SUCCEEDED(hr))
+		{
+			hr = pRenderTarget->CreateBitmapFromWicBitmap(pConverter, NULL, ppBitmap);
+		}
+
+		SafeRelease(pIWICFactory);
+		SafeRelease(pDecoder);
+		SafeRelease(pSource);
+		SafeRelease(pStream);
+		SafeRelease(pConverter);
+
+		return hr;
 	}
 };
 
@@ -846,29 +981,68 @@ void CenterWindow(HWND hWnd)
 	SetWindowPos(hWnd, HWND_TOP, x, y, 0, 0, SWP_NOSIZE);
 }
 
+Bitmap* LoadBitmapFromResource(LPCTSTR pName, LPCTSTR pType, HMODULE hInst)
+{
+	Bitmap* pImage = NULL;
+	const HRSRC hResource = FindResource(hInst, pName, pType);
+	if (!hResource)
+		return NULL;
+	const DWORD imageSize = SizeofResource(hInst, hResource);
+	if (!imageSize)
+		return NULL;
+	const void* pResourceData = LockResource(LoadResource(hInst, hResource));
+	if (!pResourceData)
+		return NULL;
+	const HGLOBAL hBuffer = GlobalAlloc(GMEM_MOVEABLE, imageSize);
+	if (hBuffer)
+	{
+		void* pBuffer = GlobalLock(hBuffer);
+		if (pBuffer)
+		{
+			CopyMemory(pBuffer, pResourceData, imageSize);
+			IStream* pStream = NULL;
+			if (CreateStreamOnHGlobal(hBuffer, TRUE, &pStream) == S_OK)
+			{
+				pImage = new Bitmap(pStream);
+				pStream->Release();
+				if (pImage)
+				{
+					if (pImage->GetLastStatus() != Gdiplus::Ok)
+					{
+						delete pImage;
+						pImage = NULL;
+					}
+				}
+			}
+			GlobalUnlock(hBuffer);
+		}
+	}
+	return pImage;
+}
+
 INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
 {
 	static Game* g;
 	switch (msg)
 	{
 	case WM_INITDIALOG:
-		{
-			WCHAR szTitle[256];
-			LoadString(GetModuleHandle(0), IDS_STRING425, szTitle, _countof(szTitle));
-			SetWindowText(hDlg, szTitle);
+	{
+		WCHAR szTitle[256];
+		LoadString(GetModuleHandle(0), IDS_STRING425, szTitle, _countof(szTitle));
+		SetWindowText(hDlg, szTitle);
 
-			WCHAR szGameNumber[256];
-			LoadString(GetModuleHandle(0), IDS_STRING426, szGameNumber, _countof(szGameNumber));
-			SetDlgItemText(hDlg, IDC_STATIC_GAMENUMBER, szGameNumber);
+		WCHAR szGameNumber[256];
+		LoadString(GetModuleHandle(0), IDS_STRING426, szGameNumber, _countof(szGameNumber));
+		SetDlgItemText(hDlg, IDC_STATIC_GAMENUMBER, szGameNumber);
 
-			WCHAR szCancel[256];
-			LoadString(GetModuleHandle(0), IDS_STRING427, szCancel, _countof(szCancel));
-			SetDlgItemText(hDlg, IDCANCEL, szCancel);
-		}
-		g = (Game*)lParam;
-		CenterWindow(hDlg);
-		SetDlgItemInt(hDlg, IDC_EDIT_SEED, (UINT)(rand() % 32000), FALSE);
-		return TRUE;
+		WCHAR szCancel[256];
+		LoadString(GetModuleHandle(0), IDS_STRING427, szCancel, _countof(szCancel));
+		SetDlgItemText(hDlg, IDCANCEL, szCancel);
+	}
+	g = (Game*)lParam;
+	CenterWindow(hDlg);
+	SetDlgItemInt(hDlg, IDC_EDIT_SEED, (UINT)(rand() % 32000), FALSE);
+	return TRUE;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK)
 		{
@@ -876,7 +1050,8 @@ INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LP
 			int seed = GetDlgItemInt(hDlg, IDC_EDIT_SEED, NULL, TRUE);
 			g->OnNewGame(seed);
 			return TRUE;
-		} else if (LOWORD(wParam) == IDCANCEL) {
+		}
+		else if (LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
@@ -891,14 +1066,17 @@ INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARA
 	switch (msg)
 	{
 	case WM_INITDIALOG:
-		{
-			WCHAR szTitle[256];
-			LoadString(GetModuleHandle(0), IDS_STRING428, szTitle, _countof(szTitle));
-			SetWindowText(hDlg, szTitle);
-		}
-		g = (Game*)lParam;
-		CenterWindow(hDlg);
-		return TRUE;
+	{
+		WCHAR szVersionInfomation[256];
+		LoadString(GetModuleHandle(0), IDS_STRING428, szVersionInfomation, _countof(szVersionInfomation));
+		SetWindowText(hDlg, szVersionInfomation);
+		WCHAR szAppName[256];
+		LoadString(GetModuleHandle(0), IDS_STRING430, szAppName, _countof(szAppName));
+		SetDlgItemTextW(hDlg, IDC_STATIC_APP_NAME, szAppName);
+	}
+	g = (Game*)lParam;
+	CenterWindow(hDlg);
+	return TRUE;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
@@ -913,27 +1091,56 @@ INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARA
 INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
 {
 	static Game* g;
+	static Bitmap* pBitmap;
 	switch (msg)
 	{
 	case WM_INITDIALOG:
-		{
-			WCHAR szTitle[256];
-			LoadString(GetModuleHandle(0), IDS_STRING424, szTitle, _countof(szTitle));
-			SetWindowText(hDlg, szTitle);
+	{
+		WCHAR szTitle[256];
+		LoadString(GetModuleHandle(0), IDS_STRING424, szTitle, _countof(szTitle));
+		SetWindowText(hDlg, szTitle);
+	}
+	g = (Game*)lParam;
+	CenterWindow(hDlg);
+	{
+		WCHAR szHelp[1024];
+		LoadString(GetModuleHandle(0), IDS_STRING429, szHelp, _countof(szHelp));
+		SetDlgItemText(hDlg, IDC_EDIT_HELP, szHelp);
+	}
+	return TRUE;
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hDlg, &ps);
+		if (!pBitmap) {
+			pBitmap = LoadBitmapFromResource(MAKEINTRESOURCE(IDB_PNG1), L"PNG", GetModuleHandle(0));
 		}
-		g = (Game*)lParam;
-		CenterWindow(hDlg);
-		{
-			WCHAR szHelp[1024];
-			LoadString(GetModuleHandle(0), IDS_STRING429, szHelp, _countof(szHelp));
-			SetDlgItemText(hDlg, IDC_EDIT_HELP, szHelp);
+		if (pBitmap) {
+			RECT rc;
+			GetClientRect(hDlg, &rc);
+			int w = pBitmap->GetWidth() * rc.bottom / pBitmap->GetHeight() / 2;
+			int h = rc.bottom / 2;
+			int x = 16;
+			int y = 16;
+			{
+				Gdiplus::Graphics g(hdc);
+				g.DrawImage(pBitmap, x, y, w, h);
+			}
 		}
-		return TRUE;
+		EndPaint(hDlg, &ps);
+	}
+	break;
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
+		}
+		break;
+	case WM_DESTROY:
+		if (pBitmap) {
+			delete pBitmap;
+			pBitmap = 0;
 		}
 		break;
 	}
@@ -1051,22 +1258,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DXGI_SWAP_CHAIN_DESC1 scd = {};
 		scd.Width = CLIENT_WIDTH;
 		scd.Height = CLIENT_HEIGHT;
-		scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;                // D2D と相性良し
+		scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;                            // D2D と相性良し
 		scd.Stereo = FALSE;
 		scd.SampleDesc.Count = 1;
 		scd.SampleDesc.Quality = 0;
 		scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		scd.BufferCount = 2;                                    // ダブルバッファ
+		scd.BufferCount = 2;                                             // ダブルバッファ
 		scd.Scaling = DXGI_SCALING_NONE;
-		scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;      // 推奨（Win8+）
-		scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;                 // HWND の場合は IGNORE
+		scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;                   // 推奨（Win8+）
+		scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;                              // HWND の場合は IGNORE
 
 		hr = dxgiFactory->CreateSwapChainForHwnd(
-			d3dDevice,    // IUnknown* (ID3D11Device*)
+			d3dDevice,   // IUnknown* (ID3D11Device*)
 			hWnd,
 			&scd,
-			nullptr,        // フルスクリーン記述（未使用）
-			nullptr,        // 出力ターゲット（未指定）
+			nullptr,       // フルスクリーン記述（未使用）
+			nullptr,       // 出力ターゲット（未指定）
 			&dxgiSwapChain
 		);
 		if (FAILED(hr)) return -1;
@@ -1094,8 +1301,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (FAILED(hr)) return -1;
 
 		// 重要：
-		//  - HWND スワップチェーンでも、D2D ビットマップの PixelFormat は PREMULTIPLIED が安定
-		//  - D2D1_BITMAP_OPTIONS_TARGET | CANNOT_DRAW の組み合わせが特に安全
+		//   - HWND スワップチェーンでも、D2D ビットマップの PixelFormat は PREMULTIPLIED が安定
+		//   - D2D1_BITMAP_OPTIONS_TARGET | CANNOT_DRAW の組み合わせが特に安全
 		D2D1_BITMAP_PROPERTIES1 bp = D2D1::BitmapProperties1(
 			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
 			D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
@@ -1125,11 +1332,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case ID_NEW_GAME:
-			{
-				long randomGameNumber = rand() % 32000 + 1;
-				g->OnNewGame(randomGameNumber);
-			}
-			break;
+		{
+			long randomGameNumber = rand() % 32000 + 1;
+			g->OnNewGame(randomGameNumber);
+		}
+		break;
 		case ID_SELECT_GAME:
 			DialogBoxParam(GetModuleHandle(0), MAKEINTRESOURCE(IDD_SELECT_GAME), hWnd, SelectGameDialogProc, (LPARAM)g);
 			break;
@@ -1190,11 +1397,14 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	ULONG_PTR gdiToken;
+	GdiplusStartupInput gdiSI;
+	GdiplusStartup(&gdiToken, &gdiSI, NULL);
 	srand((unsigned int)time(NULL));
 	MSG msg = {};
-	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1)), LoadCursor(0,IDC_ARROW), 0, MAKEINTRESOURCE(IDR_MENU1), szClassName};
+	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1)), LoadCursor(0,IDC_ARROW), 0, MAKEINTRESOURCE(IDR_MENU1), szClassName };
 	RegisterClass(&wndclass);
-	RECT rect = {0, 0, CLIENT_WIDTH, CLIENT_HEIGHT};
+	RECT rect = { 0, 0, CLIENT_WIDTH, CLIENT_HEIGHT };
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	AdjustWindowRect(&rect, dwStyle, FALSE);
 	HWND hWnd = CreateWindow(szClassName, 0, dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
@@ -1210,6 +1420,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 		}
 	}
 	DestroyAcceleratorTable(hAccel);
+	GdiplusShutdown(gdiToken);
 	CoUninitialize();
 	return (int)msg.wParam;
 }
