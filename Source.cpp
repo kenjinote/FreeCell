@@ -22,8 +22,8 @@
 #include <gdiplus.h>
 #include "resource.h"
 
-#define CLIENT_WIDTH (960)
-#define CLIENT_HEIGHT (731)
+#define CLIENT_WIDTH (960.0f)
+#define CLIENT_HEIGHT (731.0f)
 #define CARD_WIDTH (224.22508f)
 #define CARD_HEIGHT (312.80777f)
 #define CARD_SCALE (0.5f)
@@ -33,6 +33,8 @@
 #define ANIMATION_TIME (250)
 
 using namespace Gdiplus;
+
+#undef min 
 
 TCHAR szClassName[] = TEXT("FreeCell");
 HHOOK g_hHook;
@@ -90,7 +92,7 @@ public:
 	BOOL bVisible = TRUE;
 	BOOL bSelected = FALSE;
 	BOOL bCanDrag = FALSE;
-	BOOL bDrag = FALSE; // ドラッグ中はtrue
+	BOOL bDrag = FALSE;
 	float animation_from_x = 0;
 	float animation_from_y = 0;
 	float x = 0;
@@ -104,10 +106,8 @@ public:
 	void Draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1Brush* brush) {
 		if (!d2dDeviceContext) return;
 		if (!bVisible) return;
-
 		float xx;
 		float yy;
-
 		ULONGLONG now = GetTickCount64();
 		if (now < animation_start_time) {
 			xx = animation_from_x;
@@ -122,9 +122,10 @@ public:
 			xx = (float)(easeOutExpo((double)(now - animation_start_time), animation_from_x, x - animation_from_x, (double)(ANIMATION_TIME)));
 			yy = (float)(easeOutExpo((double)(now - animation_start_time), animation_from_y, y - animation_from_y, (double)(ANIMATION_TIME)));
 		}
-
+		D2D1_MATRIX_3X2_F currentTransform;
+		d2dDeviceContext->GetTransform(&currentTransform);
 		if (bSelected) {
-			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+			d2dDeviceContext->SetTransform(currentTransform);
 			D2D1_RECT_F rect;
 			rect.left = xx;
 			rect.top = yy;
@@ -132,24 +133,21 @@ public:
 			rect.bottom = yy + scale * height;
 			d2dDeviceContext->DrawRectangle(rect, brush, 10.0f);
 		}
-		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Identity();
-		transform = transform * D2D1::Matrix3x2F::Scale(scale, scale);
-		transform = transform * D2D1::Matrix3x2F::Translation(xx, yy);
+		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Scale(scale, scale) * D2D1::Matrix3x2F::Translation(xx, yy) * currentTransform;
 		d2dDeviceContext->SetTransform(transform);
 		d2dDeviceContext->DrawSvgDocument(m_svgDocument);
+		d2dDeviceContext->SetTransform(currentTransform);
 	}
 	BOOL CreateSvgDocumentFromResource(_In_opt_ HMODULE hModule,
 		_In_ LPCWSTR lpName,
 		_In_ LPCWSTR lpType,
 		ID2D1DeviceContext6* d2dContext) {
 		HRSRC hRes = FindResource(hModule, lpName, lpType);
-		if (hRes == NULL)
-		{
+		if (hRes == NULL) {
 			return FALSE;
 		}
 		HGLOBAL hResLoad = LoadResource(hModule, hRes);
-		if (hResLoad == NULL)
-		{
+		if (hResLoad == NULL) {
 			return FALSE;
 		}
 		IStream* pIStream = 0;
@@ -160,20 +158,24 @@ public:
 		}
 		LPVOID ptr = GlobalLock(hMem);
 		if (!ptr) {
+			GlobalFree(hMem);
 			return FALSE;
 		}
 		memcpy(ptr, LockResource(hResLoad), nSize);
 		GlobalUnlock(hMem);
 		if (FAILED(CreateStreamOnHGlobal(hMem, TRUE, &pIStream))) {
+			GlobalFree(hMem);
 			return FALSE;
 		}
 		if (FAILED(d2dContext->CreateSvgDocument(
 			pIStream,
-			D2D1::SizeF(width, height), // Create the document at a size of 500x500 DIPs.
+			D2D1::SizeF(width, height),
 			&m_svgDocument
 		))) {
+			SafeRelease(pIStream);
 			return FALSE;
 		}
+		SafeRelease(pIStream);
 		return TRUE;
 	}
 	BOOL HitTest(float _x, float _y) {
@@ -183,8 +185,7 @@ public:
 			_x <= x + scale * width &&
 			_y >= y &&
 			_y <= y + scale * height
-			)
-		{
+			) {
 			return TRUE;
 		}
 		return FALSE;
@@ -221,45 +222,46 @@ public:
 			c->y = y;
 		}
 		else {
+			float cardOffset = CARD_OFFSET;
 			c->x = x;
-			c->y = y + (cards.size()) * CARD_OFFSET;
+			c->y = y + (pcard_list.size()) * cardOffset;
 		}
-		cards.push_back(c);
+		pcard_list.push_back(c);
 	}
 	bool canpush(int card_no) {
 		if (type == freecell) {
-			return (cards.size() == 0);
+			return (pcard_list.size() == 0);
 		}
 		else if (type == homecell) {
-			if (cards.size() == 0) {
+			if (pcard_list.size() == 0) {
 				return (card_no % 100 == 1);
 			}
 			else {
-				Card* back = cards.back();
+				Card* back = pcard_list.back();
 				return ((back->no / 100 == card_no / 100) && (back->no % 100 + 1 == card_no % 100));
 			}
 		}
 		else {
-			if (cards.size() == 0) {
+			if (pcard_list.size() == 0) {
 				return true;
 			}
 			else {
-				Card* back = cards.back();
+				Card* back = pcard_list.back();
 				return (((back->no / 100 + card_no / 100) % 2 == 1) && (back->no % 100 == card_no % 100 + 1));
 			}
 		}
 		return false;
 	}
 	void clear() {
-		cards.clear();
+		pcard_list.clear();
 	}
 	void SetCanDragCard() {
-		for (auto& i : cards) {
+		for (auto& i : pcard_list) {
 			i->bCanDrag = FALSE;
 		}
 		if (type == freecell || type == homecell) {
-			if (cards.size() > 0) {
-				Card* back = cards.back();
+			if (pcard_list.size() > 0) {
+				Card* back = pcard_list.back();
 				back->bCanDrag = TRUE;
 			}
 		}
@@ -267,7 +269,7 @@ public:
 			bool first = true;
 			bool second = false;
 			int prev = 0;
-			for (auto i = cards.rbegin(), e = cards.rend(); i != e; ++i) {
+			for (auto i = pcard_list.rbegin(), e = pcard_list.rend(); i != e; ++i) {
 				if (first) {
 					(*i)->bCanDrag = TRUE;
 					first = false;
@@ -293,9 +295,8 @@ public:
 		rect.top = y;
 		rect.right = x + CARD_SCALE * CARD_WIDTH;
 		rect.bottom = y + CARD_SCALE * CARD_HEIGHT;
-		d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 		d2dDeviceContext->FillRectangle(rect, emptyBrush);
-		for (auto ii = cards.begin(), e = cards.end(); ii != e; ++ii) {
+		for (auto ii = pcard_list.begin(), e = pcard_list.end(); ii != e; ++ii) {
 			if (!(*ii)->bDrag) {
 				(*ii)->Draw(d2dDeviceContext, selectBrush);
 			}
@@ -303,7 +304,7 @@ public:
 	}
 	void NormalizationPos() {
 		if (type == freecell || type == homecell) {
-			for (auto p : cards) {
+			for (auto p : pcard_list) {
 				p->animation_start_time = GetTickCount64();
 				p->animation_from_x = p->x;
 				p->animation_from_y = p->y;
@@ -313,29 +314,30 @@ public:
 		}
 		else {
 			int i = 0;
-			for (auto p : cards) {
+			float cardOffset = CARD_OFFSET;
+			for (auto p : pcard_list) {
 				p->animation_start_time = GetTickCount64();
 				p->animation_from_x = p->x;
 				p->animation_from_y = p->y;
 				p->x = x;
-				p->y = y + i * CARD_OFFSET;
+				p->y = y + i * cardOffset;
 				i++;
 			}
 		}
 	}
 	size_t size() {
-		return cards.size();
+		return pcard_list.size();
 	}
 	void pop_back() {
-		cards.pop_back();
+		pcard_list.pop_back();
 	}
 	Card* back() {
-		if (cards.size() == 0) return 0;
-		return cards.back();
+		if (pcard_list.size() == 0) return 0;
+		return pcard_list.back();
 	}
 	void GetCardListFromPos(float _x, float _y, std::vector<Card*>& dragcard) {
 		dragcard.clear();
-		for (auto it = cards.rbegin(), end = cards.rend(); it != end; ++it) {
+		for (auto it = pcard_list.rbegin(), end = pcard_list.rend(); it != end; ++it) {
 			if ((*it)->HitTest(_x, _y) && (*it)->CanDrag()) {
 				dragcard.push_back(*it);
 				break;
@@ -343,7 +345,7 @@ public:
 		}
 		if (dragcard.size() > 0) {
 			bool first = false;
-			for (auto it = cards.begin(), end = cards.end(); it != end; ++it) {
+			for (auto it = pcard_list.begin(), end = pcard_list.end(); it != end; ++it) {
 				if (*it == dragcard[0]) {
 					first = true;
 					continue;
@@ -357,18 +359,18 @@ public:
 	void GetCardListFromCount(byte count, std::vector<Card*>& dragcard) {
 		dragcard.clear();
 		int i = 0;
-		for (auto it = cards.begin(), end = cards.end(); it != end; ++it) {
-			if (cards.size() - count <= i) {
+		for (auto it = pcard_list.begin(), end = pcard_list.end(); it != end; ++it) {
+			if (pcard_list.size() - count <= i) {
 				dragcard.push_back(*it);
 			}
 			i++;
 		}
 	}
 	void resize(size_t size) {
-		cards.resize(size);
+		pcard_list.resize(size);
 	}
 private:
-	std::vector<Card*> cards;
+	std::vector<Card*> pcard_list; // ● cardsからpcard_listに名前変更
 };
 
 struct operation {
@@ -388,12 +390,12 @@ public:
 	Board board[16];
 	int from_board_no = 0;
 	HWND hWnd;
-	ULONGLONG animation_start_time;
+	ULONGLONG animation_start_time = 0LL;
 	std::vector<operation> buffer;
 	int generation = 0;
-	float m_sideMargin = 0.0f;
-	float m_columnPitch = 0.0f;
-	Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
+	float m_scale = 1.0f;
+	D2D1_POINT_2F m_offset = { 0.0f, 0.0f };
+	Game::Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
 		this->hWnd = hWnd;
 		HRESULT hr = S_OK;
 		if (SUCCEEDED(hr)) {
@@ -403,31 +405,14 @@ public:
 			hr = d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(0.0F, 0.0F, 0.0F, 0.5F), &emptyBrush);
 		}
 		if (SUCCEEDED(hr)) {
-			// ★追加：クリア画像をリソースから読み込む
-			// ※ resource.h に IDB_PNG1 が定義されている必要があります
 			LoadResourcePng(d2dDeviceContext, MAKEINTRESOURCE(IDB_PNG2), &m_pClearImage);
 		}
 		if (SUCCEEDED(hr)) {
 			const int ids[] = {
-				// Clubs ♣
-				IDR_SVG301, IDR_SVG302, IDR_SVG303, IDR_SVG304, IDR_SVG305,
-				IDR_SVG306, IDR_SVG307, IDR_SVG308, IDR_SVG309, IDR_SVG310,
-				IDR_SVG311, IDR_SVG312, IDR_SVG313,
-
-				// Diamonds ♦
-				IDR_SVG401, IDR_SVG402, IDR_SVG403, IDR_SVG404, IDR_SVG405,
-				IDR_SVG406, IDR_SVG407, IDR_SVG408, IDR_SVG409, IDR_SVG410,
-				IDR_SVG411, IDR_SVG412, IDR_SVG413,
-
-				// Hearts ♥
-				IDR_SVG201, IDR_SVG202, IDR_SVG203, IDR_SVG204, IDR_SVG205,
-				IDR_SVG206, IDR_SVG207, IDR_SVG208, IDR_SVG209, IDR_SVG210,
-				IDR_SVG211, IDR_SVG212, IDR_SVG213,
-
-				// Spades ♠
-				IDR_SVG101, IDR_SVG102, IDR_SVG103, IDR_SVG104, IDR_SVG105,
-				IDR_SVG106, IDR_SVG107, IDR_SVG108, IDR_SVG109, IDR_SVG110,
-				IDR_SVG111, IDR_SVG112, IDR_SVG113
+				IDR_SVG301, IDR_SVG302, IDR_SVG303, IDR_SVG304, IDR_SVG305, IDR_SVG306, IDR_SVG307, IDR_SVG308, IDR_SVG309, IDR_SVG310, IDR_SVG311, IDR_SVG312, IDR_SVG313,
+				IDR_SVG401, IDR_SVG402, IDR_SVG403, IDR_SVG404, IDR_SVG405, IDR_SVG406, IDR_SVG407, IDR_SVG408, IDR_SVG409, IDR_SVG410, IDR_SVG411, IDR_SVG412, IDR_SVG413,
+				IDR_SVG201, IDR_SVG202, IDR_SVG203, IDR_SVG204, IDR_SVG205, IDR_SVG206, IDR_SVG207, IDR_SVG208, IDR_SVG209, IDR_SVG210, IDR_SVG211, IDR_SVG212, IDR_SVG213,
+				IDR_SVG101, IDR_SVG102, IDR_SVG103, IDR_SVG104, IDR_SVG105, IDR_SVG106, IDR_SVG107, IDR_SVG108, IDR_SVG109, IDR_SVG110, IDR_SVG111, IDR_SVG112, IDR_SVG113
 			};
 			for (int i = 0; i < _countof(ids); i++) {
 				Card* p = new Card;
@@ -436,23 +421,20 @@ public:
 				pcard.push_back(p);
 			}
 		}
-		// 左右対称の余白を持つレイアウトを計算
 		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
-		// 元のレイアウトでの列から列までの間隔 (スロット幅)
-		float originalColumnPitch = CLIENT_WIDTH / 8.0f;
-		// 元のレイアウトでのカード間の隙間 (これが右の余白と等しい)
-		float gap = originalColumnPitch - cardWidthScaled;
-		m_sideMargin = gap; // カード間の隙間を左右の余白として設定
-		float totalPlayableWidth = CLIENT_WIDTH - 2 * m_sideMargin;
-		m_columnPitch = totalPlayableWidth / 8.0f;
+		float totalCardsWidth = 8.0f * cardWidthScaled;
+		float totalEmptySpace = CLIENT_WIDTH - totalCardsWidth;
+		float gap = totalEmptySpace / 9.0f;
+		float sideMargin = gap;
+		float columnPitch = cardWidthScaled + gap;
 		for (int i = 0; i < _countof(board); i++) {
 			if (i < 8) { // 上段 (フリーセル, ホームセル)
-				board[i].x = m_sideMargin + m_columnPitch * i;
+				board[i].x = sideMargin + columnPitch * i;
 				board[i].y = BOARD_OFFSET;
 				board[i].type = (i < 4) ? Board::freecell : Board::homecell;
 			}
 			else { // 下段 (テーブル)
-				board[i].x = m_sideMargin + m_columnPitch * (i - 8);
+				board[i].x = sideMargin + columnPitch * (i - 8);
 				board[i].y = CARD_SCALE * CARD_HEIGHT + 2.0f * BOARD_OFFSET;
 				board[i].type = Board::tablecell;
 			}
@@ -465,22 +447,34 @@ public:
 		}
 		SafeRelease(selectBrush);
 		SafeRelease(emptyBrush);
-		SafeRelease(m_pClearImage); // ★追加：ビットマップの解放
+		SafeRelease(m_pClearImage);
 	}
-	int GetBoardIndexFromPoint(int x, int y) {
-		// 左右の余白部分がクリックされた場合は無効(-1)とする
-		if (x < m_sideMargin || x >= CLIENT_WIDTH - m_sideMargin) {
+	void Game::UpdateLayout(D2D1_SIZE_F physicalSize) {
+		float scaleX = physicalSize.width / CLIENT_WIDTH;
+		float scaleY = physicalSize.height / CLIENT_HEIGHT;
+		m_scale = std::min(scaleX, scaleY);
+		float scaledWidth = CLIENT_WIDTH * m_scale;
+		float scaledHeight = CLIENT_HEIGHT * m_scale;
+		m_offset.x = (physicalSize.width - scaledWidth) / 2.0f;
+		m_offset.y = (physicalSize.height - scaledHeight) / 2.0f;
+	}
+	void TransformMouse(float& x, float& y) {
+		x = (x - m_offset.x) / m_scale;
+		y = (y - m_offset.y) / m_scale;
+	}
+	int Game::GetBoardIndexFromPoint(float x, float y) {
+		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
+		float totalCardsWidth = 8.0f * cardWidthScaled;
+		float totalEmptySpace = CLIENT_WIDTH - totalCardsWidth;
+		float gap = totalEmptySpace / 9.0f;
+		float sideMargin = gap;
+		float columnPitch = cardWidthScaled + gap;
+		if (x < sideMargin || x >= CLIENT_WIDTH - sideMargin) {
 			return -1;
 		}
-
-		// X座標から列番号(0-7)を計算
-		int columnIndex = static_cast<int>((x - m_sideMargin) / m_columnPitch);
-
-		// 念のため範囲内に収める
+		int columnIndex = static_cast<int>((x - sideMargin) / columnPitch);
 		if (columnIndex < 0) columnIndex = 0;
 		if (columnIndex > 7) columnIndex = 7;
-
-		// Y座標から上段か下段かを判断し、最終的なボード番号を返す
 		bool isBottomRow = (y > CARD_SCALE * CARD_HEIGHT + 1.5 * BOARD_OFFSET);
 		return columnIndex + (isBottomRow ? 8 : 0);
 	}
@@ -492,16 +486,19 @@ public:
 			wsprintf(szTitle, TEXT("%s #%ld"), szAppName, gameNumber);
 			SetWindowTextW(hWnd, szTitle);
 		}
-		m_bGameClear = FALSE; // ★追加：クリアフラグをリセット
+		m_bGameClear = FALSE;
 		UnSelectAll();
 		UnDragAll();
 		for (auto& i : board) {
 			i.clear();
-		};
+		}
 		generation = 0;
 		buffer.clear();
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		UpdateLayout(D2D1::SizeF(static_cast<float>(rc.right - rc.left), static_cast<float>(rc.bottom - rc.top)));
 		for (auto& c : pcard) {
-			c->x = CLIENT_WIDTH / 2.0f - c->scale * c->width / 2.0f;
+			c->x = CLIENT_WIDTH / 2.0f - (CARD_SCALE * c->width) / 2.0f;
 			c->y = CLIENT_HEIGHT;
 		}
 		InvalidateRect(hWnd, 0, 0);
@@ -514,27 +511,18 @@ public:
 				const int odd_ranks[] = { 0, 2, 4, 6, 8, 10, 12 };
 				const int even_ranks[] = { 11, 9, 7, 5, 3, 1 };
 				for (int i = 0; i < 4; ++i) {
-					for (int rank_idx : odd_ranks) {
-						board[8 + i].push_back(base_deck[i * 13 + rank_idx], delay);
-						delay += 20;
-					}
+					for (int rank_idx : odd_ranks) { board[8 + i].push_back(base_deck[i * 13 + rank_idx], delay); delay += 20; }
 				}
 				for (int i = 0; i < 4; ++i) {
-					for (int rank_idx : even_ranks) {
-						board[12 + i].push_back(base_deck[i * 13 + rank_idx], delay);
-						delay += 20;
-					}
+					for (int rank_idx : even_ranks) { board[12 + i].push_back(base_deck[i * 13 + rank_idx], delay); delay += 20; }
 				}
 			}
 			else {
 				for (int suit = 0; suit < 4; ++suit) {
-					for (int rank = 12; rank >= 0; --rank) {
-						board[8 + suit].push_back(base_deck[suit * 13 + rank], delay);
-						delay += 20;
-					}
+					for (int rank = 12; rank >= 0; --rank) { board[8 + suit].push_back(base_deck[suit * 13 + rank], delay); delay += 20; }
 				}
 			}
-			total_delay = (delay > 0) ? (delay - 20) : 0; // 最後のカードの遅延時間を記録
+			total_delay = (delay > 0) ? (delay - 20) : 0;
 		}
 		else {
 			long holdrand = (long)gameNumber;
@@ -549,25 +537,18 @@ public:
 			std::vector<Card*> base_deck(pcard.begin(), pcard.end());
 			std::vector<Card*> sorted_base_deck(52);
 			for (int rank = 0; rank < 13; ++rank) {
-				for (int suit = 0; suit < 4; ++suit) {
-					int from_index = suit * 13 + rank;
-					int to_index = rank * 4 + suit;
-					sorted_base_deck[to_index] = base_deck[from_index];
-				}
+				for (int suit = 0; suit < 4; ++suit) { sorted_base_deck[rank * 4 + suit] = base_deck[suit * 13 + rank]; }
 			}
 			std::vector<Card*> deck(52);
 			for (int i = 0; i < 52; i++) deck[i] = sorted_base_deck[card_indices[i]];
-
 			ULONGLONG delay = 0;
 			for (int i = 0; i < 52; i++) {
 				board[8 + i % 8].push_back(deck[i], delay);
 				delay += 20;
 			}
-			total_delay = (delay > 0) ? (delay - 20) : 0; // 最後のカードの遅延時間を記録
+			total_delay = (delay > 0) ? (delay - 20) : 0;
 		}
-
-		// --- 3. 共通の後処理 ---
-		AnimationStart(total_delay); // 全てのアニメーションをカバーするタイマーを開始
+		AnimationStart(total_delay);
 		SetCanDragCard();
 	}
 	void UnSelectAll() {
@@ -593,6 +574,11 @@ public:
 		return board[board_no].canpush(card_no);
 	}
 	void DrawBoard(ID2D1DeviceContext6* d2dDeviceContext) {
+		D2D1_SIZE_F physicalSize = d2dDeviceContext->GetSize();
+		UpdateLayout(physicalSize);
+		d2dDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::ForestGreen));
+		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Scale(m_scale, m_scale) * D2D1::Matrix3x2F::Translation(m_offset.x, m_offset.y);
+		d2dDeviceContext->SetTransform(transform);
 		for (int i = _countof(board) - 1; i >= 0; i--) {
 			if (board[i].active == false) {
 				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush);
@@ -606,46 +592,21 @@ public:
 		for (auto& i : dragcard) {
 			i->Draw(d2dDeviceContext, selectBrush);
 		}
-		// ★追加：ゲームクリア時に画像を描画
+		d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 		if (m_bGameClear && m_pClearImage)
 		{
-			d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-			D2D1_SIZE_F size = m_pClearImage->GetSize();
-
-			// 描画先の矩形を定義します (左上の座標と右下の座標)
+			D2D1_SIZE_F imageSize = m_pClearImage->GetSize();
+			float imgScale = 0.3f * m_scale;
+			float scaledWidth = imageSize.width * imgScale;
+			float scaledHeight = imageSize.height * imgScale;
 			D2D1_RECT_F destinationRect = D2D1::RectF(
-				0,
-				CLIENT_HEIGHT - 28,
-				size.width / 2.0f,
-				CLIENT_HEIGHT - 28 - size.height /2.0f
+				m_offset.x + BOARD_OFFSET * m_scale,
+				m_offset.y + CLIENT_HEIGHT * m_scale - scaledHeight - BOARD_OFFSET * m_scale,
+				m_offset.x + BOARD_OFFSET * m_scale + scaledWidth,
+				m_offset.y + CLIENT_HEIGHT * m_scale - BOARD_OFFSET * m_scale
 			);
-
-			// ソース画像全体を指定する矩形を定義します
-			D2D1_RECT_F sourceRect = D2D1::RectF(0.0f, 0.0f, size.width, size.height);
-
-			// ソース矩形全体を、指定した描画先矩形に描画します
-			// このオーバーロードを使用することで、画像が切れる問題を防ぎます。
-			d2dDeviceContext->DrawBitmap(
-				m_pClearImage,
-				&destinationRect,
-				1.0f, // Opacity
-				D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-				&sourceRect
-			);
+			d2dDeviceContext->DrawBitmap(m_pClearImage, &destinationRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 		}
-		//{
-		//	d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-		//	D2D1_SIZE_F size = m_pClearImage->GetSize();
-		//	d2dDeviceContext->DrawBitmap(
-		//		m_pClearImage,
-		//		D2D1::RectF(
-		//			BOARD_OFFSET,                       // x (左)
-		//			CLIENT_HEIGHT - size.height / 2.0f - 2.0f * BOARD_OFFSET, // y (上)
-		//			BOARD_OFFSET + size.width / 2.0f,          // x (右)
-		//			CLIENT_HEIGHT - 2.0f * BOARD_OFFSET        // y (下)
-		//		)
-		//	);
-		//}
 	}
 	int CanHome(int card_no) {
 		for (int i = 4; i < 8; i++) {
@@ -680,7 +641,7 @@ public:
 			SendMessage(hWnd, WM_COMMAND, ID_NEW_GAME, 0);
 		}
 	}
-	void OnLButtonDoubleClick(int x, int y) {
+	void OnLButtonDoubleClick(float x, float y) {
 		UnSelectAll();
 		UnDragAll();
 		int from_board_no = GetBoardIndexFromPoint(x, y);
@@ -709,12 +670,12 @@ public:
 			}
 		}
 	}
-	void OnLButtonDown(int x, int y) {
+	void OnLButtonDown(float x, float y) {
 		UnSelectAll();
 		UnDragAll();
 		int board_no = GetBoardIndexFromPoint(x, y);
-		if (board_no < 0) return; // 余白クリックは無視
-		board[board_no].GetCardListFromPos((float)x, (float)y, dragcard);
+		if (board_no < 0) return;
+		board[board_no].GetCardListFromPos(x, y, dragcard);
 		if (dragcard.size() > 0) {
 			for (auto card : dragcard) {
 				card->bSelected = TRUE;
@@ -727,11 +688,11 @@ public:
 		}
 		InvalidateRect(hWnd, 0, 0);
 	}
-	void OnMouseMove(int x, int y) {
+	void OnMouseMove(float x, float y) {
 		if (dragcard.size() > 0) {
 			for (auto card : dragcard) {
-				card->x = (float)x - card->offset_x;
-				card->y = (float)y - card->offset_y;
+				card->x = x - card->offset_x;
+				card->y = y - card->offset_y;
 			}
 			InvalidateRect(hWnd, 0, 0);
 		}
@@ -746,16 +707,16 @@ public:
 			}
 		}
 	}
-	void OnLButtonUP(int, int) {
+	void OnLButtonUP(float x, float y) {
 		if (dragcard.size() > 0) {
 			ReleaseCapture();
 			Card* back = dragcard.back();
-			int card_center_x = static_cast<int>(back->x + back->scale * back->width / 2.0f);
-			int card_center_y = static_cast<int>(back->y + back->scale * back->height / 2.0f);
-			int to_board_no = GetBoardIndexFromPoint(card_center_x, card_center_y);
+			int card_center_x = static_cast<int>(back->x + CARD_SCALE * back->width / 2.0f);
+			int card_center_y = static_cast<int>(back->y + CARD_SCALE * back->height / 2.0f);
+			int to_board_no = GetBoardIndexFromPoint(static_cast<float>(card_center_x), static_cast<float>(card_center_y));
 			if (
 				to_board_no != from_board_no &&
-				to_board_no >= 0 && // 余白へのドロップは無効
+				to_board_no >= 0 &&
 				(to_board_no >= 8 || dragcard.size() == 1) &&
 				CanDrop(dragcard[0]->no, to_board_no) &&
 				dragcard.size() <= GetSpaceCount() + 1)
@@ -771,7 +732,7 @@ public:
 				UnSelectAll();
 				SetCanDragCard();
 				if (IsGameClear()) {
-					m_bGameClear = TRUE; // ★追加
+					m_bGameClear = TRUE;
 					AskNewGame();
 				}
 				else {
@@ -866,7 +827,7 @@ public:
 							UnSelectAll();
 							SetCanDragCard();
 							if (IsGameClear()) {
-								m_bGameClear = TRUE; // ★追加
+								m_bGameClear = TRUE;
 								AskNewGame();
 								return;
 							}
@@ -884,7 +845,6 @@ public:
 		}
 	}
 private:
-	// ★追加：リソースからPNGを読み込みID2D1Bitmapを作成するヘルパー関数
 	HRESULT LoadResourcePng(
 		ID2D1DeviceContext* pRenderTarget,
 		PCWSTR resourceName,
@@ -897,69 +857,52 @@ private:
 		IWICBitmapFrameDecode* pSource = NULL;
 		IWICStream* pStream = NULL;
 		IWICFormatConverter* pConverter = NULL;
-
 		HRSRC imageResHandle = NULL;
 		HGLOBAL imageResDataHandle = NULL;
 		void* pImageFile = NULL;
 		DWORD imageFileSize = 0;
-
-		// WIC Factoryを作成
 		hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pIWICFactory));
 		if (FAILED(hr)) return hr;
-
 		imageResHandle = FindResource(NULL, resourceName, L"PNG");
 		hr = imageResHandle ? S_OK : E_FAIL;
-
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			imageResDataHandle = LoadResource(NULL, imageResHandle);
 			hr = imageResDataHandle ? S_OK : E_FAIL;
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			pImageFile = LockResource(imageResDataHandle);
 			hr = pImageFile ? S_OK : E_FAIL;
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			imageFileSize = SizeofResource(NULL, imageResHandle);
 			hr = imageFileSize ? S_OK : E_FAIL;
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pIWICFactory->CreateStream(&pStream);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pStream->InitializeFromMemory(reinterpret_cast<BYTE*>(pImageFile), imageFileSize);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pIWICFactory->CreateDecoderFromStream(pStream, NULL, WICDecodeMetadataCacheOnLoad, &pDecoder);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pDecoder->GetFrame(0, &pSource);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pIWICFactory->CreateFormatConverter(&pConverter);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pConverter->Initialize(pSource, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.f, WICBitmapPaletteTypeMedianCut);
 		}
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			hr = pRenderTarget->CreateBitmapFromWicBitmap(pConverter, NULL, ppBitmap);
 		}
-
 		SafeRelease(pIWICFactory);
 		SafeRelease(pDecoder);
 		SafeRelease(pSource);
 		SafeRelease(pStream);
 		SafeRelease(pConverter);
-
 		return hr;
 	}
 };
@@ -994,21 +937,16 @@ Bitmap* LoadBitmapFromResource(LPCTSTR pName, LPCTSTR pType, HMODULE hInst)
 	if (!pResourceData)
 		return NULL;
 	const HGLOBAL hBuffer = GlobalAlloc(GMEM_MOVEABLE, imageSize);
-	if (hBuffer)
-	{
+	if (hBuffer) {
 		void* pBuffer = GlobalLock(hBuffer);
-		if (pBuffer)
-		{
+		if (pBuffer) {
 			CopyMemory(pBuffer, pResourceData, imageSize);
 			IStream* pStream = NULL;
-			if (CreateStreamOnHGlobal(hBuffer, TRUE, &pStream) == S_OK)
-			{
+			if (CreateStreamOnHGlobal(hBuffer, TRUE, &pStream) == S_OK) {
 				pImage = new Bitmap(pStream);
 				pStream->Release();
-				if (pImage)
-				{
-					if (pImage->GetLastStatus() != Gdiplus::Ok)
-					{
+				if (pImage) {
+					if (pImage->GetLastStatus() != Gdiplus::Ok) {
 						delete pImage;
 						pImage = NULL;
 					}
@@ -1023,8 +961,7 @@ Bitmap* LoadBitmapFromResource(LPCTSTR pName, LPCTSTR pType, HMODULE hInst)
 INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
 {
 	static Game* g;
-	switch (msg)
-	{
+	switch (msg) {
 	case WM_INITDIALOG:
 	{
 		WCHAR szTitle[256];
@@ -1044,8 +981,7 @@ INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LP
 	SetDlgItemInt(hDlg, IDC_EDIT_SEED, (UINT)(rand() % 32000), FALSE);
 	return TRUE;
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK)
-		{
+		if (LOWORD(wParam) == IDOK) {
 			EndDialog(hDlg, LOWORD(wParam));
 			int seed = GetDlgItemInt(hDlg, IDC_EDIT_SEED, NULL, TRUE);
 			g->OnNewGame(seed);
@@ -1063,8 +999,7 @@ INT_PTR CALLBACK SelectGameDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LP
 INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM lParam)
 {
 	static Game* g;
-	switch (msg)
-	{
+	switch (msg) {
 	case WM_INITDIALOG:
 	{
 		WCHAR szVersionInfomation[256];
@@ -1078,8 +1013,7 @@ INT_PTR CALLBACK VersionDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARA
 	CenterWindow(hDlg);
 	return TRUE;
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
@@ -1092,8 +1026,7 @@ INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM l
 {
 	static Game* g;
 	static Bitmap* pBitmap;
-	switch (msg)
-	{
+	switch (msg) {
 	case WM_INITDIALOG:
 	{
 		WCHAR szTitle[256];
@@ -1131,8 +1064,7 @@ INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM l
 	}
 	break;
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
@@ -1147,6 +1079,37 @@ INT_PTR CALLBACK HelpDialogProc(HWND hDlg, unsigned msg, WPARAM wParam, LPARAM l
 	return FALSE;
 }
 
+HRESULT ResizeSwapChain(
+	IDXGISwapChain1* dxgiSwapChain,
+	ID2D1DeviceContext6* d2dDeviceContext,
+	UINT width,
+	UINT height,
+	IDXGISurface*& dxgiBackBufferSurface,
+	ID2D1Bitmap1*& bmpTarget) {
+	HRESULT hr = S_OK;
+	d2dDeviceContext->SetTarget(nullptr);
+	SafeRelease(bmpTarget);
+	SafeRelease(dxgiBackBufferSurface);
+	hr = dxgiSwapChain->ResizeBuffers(
+		2,
+		width,
+		height,
+		DXGI_FORMAT_B8G8R8A8_UNORM,
+		0
+	);
+	if (FAILED(hr)) return hr;
+	hr = dxgiSwapChain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgiBackBufferSurface);
+	if (FAILED(hr)) return hr;
+	D2D1_BITMAP_PROPERTIES1 bp = D2D1::BitmapProperties1(
+		D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)
+	);
+	hr = d2dDeviceContext->CreateBitmapFromDxgiSurface(dxgiBackBufferSurface, &bp, &bmpTarget);
+	if (FAILED(hr)) return hr;
+	d2dDeviceContext->SetTarget(bmpTarget);
+	return hr;
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static ID3D11Device* d3dDevice;
@@ -1158,46 +1121,81 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static IDXGISurface* dxgiBackBufferSurface;
 	static ID2D1Bitmap1* bmpTarget;
 	static Game* g;
-	switch (msg)
+	switch (msg) {
+	case WM_DPICHANGED:
 	{
+		RECT* const prcNewWindow = (RECT*)lParam;
+		if (prcNewWindow) {
+			SetWindowPos(hWnd,
+				NULL,
+				prcNewWindow->left,
+				prcNewWindow->top,
+				prcNewWindow->right - prcNewWindow->left,
+				prcNewWindow->bottom - prcNewWindow->top,
+				SWP_NOZORDER | SWP_NOACTIVATE);
+		}
+		break;
+	}
+	case WM_SIZE:
+	{
+		UINT width = LOWORD(lParam);
+		UINT height = HIWORD(lParam);
+		if (dxgiSwapChain && width > 0 && height > 0) {
+			ResizeSwapChain(dxgiSwapChain, d2dDeviceContext, width, height, dxgiBackBufferSurface, bmpTarget);
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		break;
+	}
 	case WM_TIMER:
 	{
-		g->OnTimer();
+		if (g) {
+			g->OnTimer();
+		}
 		break;
 	}
 	case WM_LBUTTONDBLCLK:
 	{
-		int x = GET_X_LPARAM(lParam);
-		int y = GET_Y_LPARAM(lParam);
-		g->OnLButtonDoubleClick(x, y);
+		if (g) {
+			float x = static_cast<float>(GET_X_LPARAM(lParam));
+			float y = static_cast<float>(GET_Y_LPARAM(lParam));
+			g->TransformMouse(x, y);
+			g->OnLButtonDoubleClick(x, y);
+		}
 		break;
 	}
 	case WM_LBUTTONDOWN:
 	{
-		int x = GET_X_LPARAM(lParam);
-		int y = GET_Y_LPARAM(lParam);
-		g->OnLButtonDown(x, y);
+		if (g) {
+			float x = static_cast<float>(GET_X_LPARAM(lParam));
+			float y = static_cast<float>(GET_Y_LPARAM(lParam));
+			g->TransformMouse(x, y);
+			g->OnLButtonDown(x, y);
+		}
 		break;
 	}
 	case WM_MOUSEMOVE:
 	{
-		int x = GET_X_LPARAM(lParam);
-		int y = GET_Y_LPARAM(lParam);
-		g->OnMouseMove(x, y);
+		if (g) {
+			float x = static_cast<float>(GET_X_LPARAM(lParam));
+			float y = static_cast<float>(GET_Y_LPARAM(lParam));
+			g->TransformMouse(x, y);
+			g->OnMouseMove(x, y);
+		}
 		break;
 	}
 	case WM_LBUTTONUP:
 	{
-		int x = GET_X_LPARAM(lParam);
-		int y = GET_Y_LPARAM(lParam);
-		g->OnLButtonUP(x, y);
+		if (g) {
+			float x = static_cast<float>(GET_X_LPARAM(lParam));
+			float y = static_cast<float>(GET_Y_LPARAM(lParam));
+			g->TransformMouse(x, y);
+			g->OnLButtonUP(x, y);
+		}
 		break;
 	}
 	case WM_CREATE:
 	{
 		HRESULT hr = S_OK;
-
-		// 1) D3D11 デバイス作成
 		D3D_FEATURE_LEVEL featureLevels[] =
 		{
 			D3D_FEATURE_LEVEL_11_1, // Windows 8 以降で有効。ダメなら下にフォールバック
@@ -1208,14 +1206,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			D3D_FEATURE_LEVEL_9_2,
 			D3D_FEATURE_LEVEL_9_1
 		};
-
 		UINT deviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // ← D2D 連携には必須
 #ifdef _DEBUG
 		deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-
 		D3D_FEATURE_LEVEL obtained = D3D_FEATURE_LEVEL_11_0;
-
 		hr = D3D11CreateDevice(
 			nullptr,
 			D3D_DRIVER_TYPE_HARDWARE,
@@ -1229,35 +1224,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			NULL
 		);
 		if (FAILED(hr)) return -1;
-
-		// 2) IDXGIDevice を取得
 		hr = d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
 		if (FAILED(hr)) return -1;
-
-		// 3) DXGI Factory 作成
 		UINT factoryFlags = 0;
 #ifdef _DEBUG
 		factoryFlags |= DXGI_CREATE_FACTORY_DEBUG; // リリース環境では 0 に
 #endif
 		hr = CreateDXGIFactory2(factoryFlags, __uuidof(IDXGIFactory2), (void**)&dxgiFactory);
 		if (FAILED(hr)) return -1;
-
-		// Alt+Enter を OS に奪われないよう関連付け（必要なら）
-		if (dxgiFactory)
-		{
+		if (dxgiFactory) {
 			IDXGIFactory* oldFactory = nullptr;
 			hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory), (void**)&oldFactory);
-			if (SUCCEEDED(hr) && oldFactory)
-			{
+			if (SUCCEEDED(hr) && oldFactory) {
 				oldFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
 				oldFactory->Release();
 			}
 		}
-
-		// 4) スワップチェーン作成（HWND）
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		UINT width = rc.right - rc.left;
+		UINT height = rc.bottom - rc.top;
 		DXGI_SWAP_CHAIN_DESC1 scd = {};
-		scd.Width = CLIENT_WIDTH;
-		scd.Height = CLIENT_HEIGHT;
+		scd.Width = width;
+		scd.Height = height;
 		scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;                            // D2D と相性良し
 		scd.Stereo = FALSE;
 		scd.SampleDesc.Count = 1;
@@ -1267,7 +1256,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		scd.Scaling = DXGI_SCALING_NONE;
 		scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;                   // 推奨（Win8+）
 		scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;                              // HWND の場合は IGNORE
-
 		hr = dxgiFactory->CreateSwapChainForHwnd(
 			d3dDevice,   // IUnknown* (ID3D11Device*)
 			hWnd,
@@ -1277,9 +1265,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			&dxgiSwapChain
 		);
 		if (FAILED(hr)) return -1;
-
-		// 5) D2D デバイス & デバイスコンテキスト作成
-		//    D2D1CreateDevice は D2D1.1 API
 		D2D1_CREATION_PROPERTIES cp = D2D1::CreationProperties(
 			D2D1_THREADING_MODE_SINGLE_THREADED,
 #ifdef _DEBUG
@@ -1289,44 +1274,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 			D2D1_DEVICE_CONTEXT_OPTIONS_NONE
 		);
-
 		hr = D2D1CreateDevice(dxgiDevice, cp, (ID2D1Device**)&d2dDevice);
 		if (FAILED(hr)) return -1;
-
 		hr = d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, (ID2D1DeviceContext**)&d2dDeviceContext);
 		if (FAILED(hr)) return -1;
-
-		// 6) バックバッファから IDXGISurface を取得し、D2D ターゲットビットマップを作成
 		hr = dxgiSwapChain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgiBackBufferSurface);
 		if (FAILED(hr)) return -1;
-
-		// 重要：
-		//   - HWND スワップチェーンでも、D2D ビットマップの PixelFormat は PREMULTIPLIED が安定
-		//   - D2D1_BITMAP_OPTIONS_TARGET | CANNOT_DRAW の組み合わせが特に安全
 		D2D1_BITMAP_PROPERTIES1 bp = D2D1::BitmapProperties1(
 			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
 			D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
 			0.0f,
 			0.0f
 		);
-
 		hr = d2dDeviceContext->CreateBitmapFromDxgiSurface(
 			dxgiBackBufferSurface,
 			&bp,
 			&bmpTarget
 		);
 		if (FAILED(hr)) return -1;
-
 		d2dDeviceContext->SetTarget(bmpTarget);
 		d2dDeviceContext->SetUnitMode(D2D1_UNIT_MODE_PIXELS);
 		d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 		d2dDeviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_ALIASED);
 		g = new Game(hWnd, d2dDeviceContext);
-
 		if (!g) return -1;
-
 		PostMessage(hWnd, WM_COMMAND, ID_NEW_GAME, 0);
-
 		break;
 	}
 	case WM_COMMAND:
@@ -1360,13 +1332,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
-		if (BeginPaint(hWnd, &ps))
-		{
-			d2dDeviceContext->BeginDraw();
-			d2dDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::ForestGreen));
-			g->DrawBoard(d2dDeviceContext);
-			d2dDeviceContext->EndDraw();
-			dxgiSwapChain->Present(1, 0);
+		if (BeginPaint(hWnd, &ps)) {
+			if (d2dDeviceContext && g) {
+				d2dDeviceContext->BeginDraw();
+				g->DrawBoard(d2dDeviceContext);
+				HRESULT hr = d2dDeviceContext->EndDraw();
+				if (hr != D2DERR_RECREATE_TARGET) {
+					dxgiSwapChain->Present(1, 0);
+				}
+			}
 			EndPaint(hWnd, &ps);
 		}
 		break;
@@ -1404,17 +1378,16 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	MSG msg = {};
 	WNDCLASS wndclass = { CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1)), LoadCursor(0,IDC_ARROW), 0, MAKEINTRESOURCE(IDR_MENU1), szClassName };
 	RegisterClass(&wndclass);
-	RECT rect = { 0, 0, CLIENT_WIDTH, CLIENT_HEIGHT };
+	UINT dpi = GetDpiForSystem(); // 最初のウィンドウはシステムのDPIに合わせる
+	RECT rect = { 0, 0, (LONG)CLIENT_WIDTH, (LONG)CLIENT_HEIGHT };
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-	AdjustWindowRect(&rect, dwStyle, FALSE);
+	AdjustWindowRectExForDpi(&rect, dwStyle, TRUE, 0, dpi);
 	HWND hWnd = CreateWindow(szClassName, 0, dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
 	UpdateWindow(hWnd);
 	HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
-	while (GetMessage(&msg, 0, 0, 0))
-	{
-		if (!TranslateAccelerator(hWnd, hAccel, &msg))
-		{
+	while (GetMessage(&msg, 0, 0, 0)) {
+		if (!TranslateAccelerator(hWnd, hAccel, &msg)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
