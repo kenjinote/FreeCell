@@ -1,4 +1,4 @@
-﻿#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #pragma comment(lib,"d3d11")
 #pragma comment(lib,"d2d1")
@@ -9,6 +9,7 @@
 #include <list>
 #include <vector>
 #include <random>
+#include <algorithm>
 
 #include <windows.h>
 #include <windowsx.h>
@@ -289,38 +290,48 @@ public:
 			}
 		}
 	}
-	void draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1SolidColorBrush* selectBrush, ID2D1SolidColorBrush* emptyBrush) {
+	void draw(ID2D1DeviceContext6* d2dDeviceContext, ID2D1SolidColorBrush* selectBrush, ID2D1SolidColorBrush* emptyBrush, ULONGLONG now = 0) {
 		D2D1_RECT_F rect;
 		rect.left = x;
 		rect.top = y;
 		rect.right = x + CARD_SCALE * CARD_WIDTH;
 		rect.bottom = y + CARD_SCALE * CARD_HEIGHT;
 		d2dDeviceContext->FillRectangle(rect, emptyBrush);
+
 		for (auto ii = pcard_list.begin(), e = pcard_list.end(); ii != e; ++ii) {
 			if (!(*ii)->bDrag) {
-				(*ii)->Draw(d2dDeviceContext, selectBrush);
+				bool isArrived = ((*ii)->animation_start_time == 0 || now > (*ii)->animation_start_time + ANIMATION_TIME);
+				if (isArrived) {
+					(*ii)->Draw(d2dDeviceContext, selectBrush);
+				}
 			}
 		}
 	}
 	void NormalizationPos() {
+		ULONGLONG now = GetTickCount64();
 		if (type == freecell || type == homecell) {
 			for (auto p : pcard_list) {
-				p->animation_start_time = GetTickCount64();
-				p->animation_from_x = p->x;
-				p->animation_from_y = p->y;
-				p->x = x;
-				p->y = y;
+				if (p->x != x || p->y != y) {
+					p->animation_start_time = now;
+					p->animation_from_x = p->x;
+					p->animation_from_y = p->y;
+					p->x = x;
+					p->y = y;
+				}
 			}
 		}
 		else {
 			int i = 0;
 			float cardOffset = CARD_OFFSET;
 			for (auto p : pcard_list) {
-				p->animation_start_time = GetTickCount64();
-				p->animation_from_x = p->x;
-				p->animation_from_y = p->y;
-				p->x = x;
-				p->y = y + i * cardOffset;
+				float targetY = y + i * cardOffset;
+				if (p->x != x || p->y != targetY) {
+					p->animation_start_time = now;
+					p->animation_from_x = p->x;
+					p->animation_from_y = p->y;
+					p->x = x;
+					p->y = targetY;
+				}
 				i++;
 			}
 		}
@@ -369,7 +380,7 @@ public:
 	void resize(size_t size) {
 		pcard_list.resize(size);
 	}
-private:
+public:
 	std::vector<Card*> pcard_list; // ● cardsからpcard_listに名前変更
 };
 
@@ -395,6 +406,8 @@ public:
 	int generation = 0;
 	float m_scale = 1.0f;
 	D2D1_POINT_2F m_offset = { 0.0f, 0.0f };
+	float m_logicalWidth = CLIENT_WIDTH;
+	float m_logicalHeight = CLIENT_HEIGHT;
 	Game::Game(HWND hWnd, ID2D1DeviceContext6* d2dDeviceContext) {
 		this->hWnd = hWnd;
 		HRESULT hr = S_OK;
@@ -421,24 +434,10 @@ public:
 				pcard.push_back(p);
 			}
 		}
-		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
-		float totalCardsWidth = 8.0f * cardWidthScaled;
-		float totalEmptySpace = CLIENT_WIDTH - totalCardsWidth;
-		float gap = totalEmptySpace / 9.0f;
-		float sideMargin = gap;
-		float columnPitch = cardWidthScaled + gap;
 		for (int i = 0; i < _countof(board); i++) {
-			if (i < 8) { // 上段 (フリーセル, ホームセル)
-				board[i].x = sideMargin + columnPitch * i;
-				board[i].y = BOARD_OFFSET;
-				board[i].type = (i < 4) ? Board::freecell : Board::homecell;
-			}
-			else { // 下段 (テーブル)
-				board[i].x = sideMargin + columnPitch * (i - 8);
-				board[i].y = CARD_SCALE * CARD_HEIGHT + 2.0f * BOARD_OFFSET;
-				board[i].type = Board::tablecell;
-			}
+			board[i].type = (i < 8) ? ((i < 4) ? Board::freecell : Board::homecell) : Board::tablecell;
 		}
+		RecalculateBoardPositions(true);
 	}
 	~Game() {
 		for (auto& i : pcard) {
@@ -449,14 +448,64 @@ public:
 		SafeRelease(emptyBrush);
 		SafeRelease(m_pClearImage);
 	}
+	void RecalculateBoardPositions(bool initial = false) {
+		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
+		float totalCardsWidth = 8.0f * cardWidthScaled;
+		float totalEmptySpace = m_logicalWidth - totalCardsWidth;
+		float gap = totalEmptySpace / 9.0f;
+		float sideMargin = gap;
+		float columnPitch = cardWidthScaled + gap;
+		for (int i = 0; i < 16; i++) {
+			if (i < 8) {
+				board[i].x = sideMargin + columnPitch * i;
+				board[i].y = BOARD_OFFSET;
+			}
+			else {
+				board[i].x = sideMargin + columnPitch * (i - 8);
+				board[i].y = CARD_SCALE * CARD_HEIGHT + 2.0f * BOARD_OFFSET;
+			}
+			
+			if (!initial) {
+				int index = 0;
+				float cardOffset = CARD_OFFSET;
+				for (auto c : board[i].pcard_list) {
+					if (c->bDrag) { index++; continue; }
+					c->animation_start_time = 0;
+					if (i < 8) {
+						c->x = board[i].x;
+						c->y = board[i].y;
+					} else {
+						c->x = board[i].x;
+						c->y = board[i].y + index * cardOffset;
+					}
+					index++;
+				}
+			}
+		}
+		if (!initial && dragcard.size() > 0) {
+			ReleaseCapture();
+			for(auto c : dragcard) {
+				board[from_board_no].push_back(c);
+			}
+			UnDragAll();
+			RecalculateBoardPositions(false);
+		}
+	}
 	void Game::UpdateLayout(D2D1_SIZE_F physicalSize) {
 		float scaleX = physicalSize.width / CLIENT_WIDTH;
 		float scaleY = physicalSize.height / CLIENT_HEIGHT;
-		m_scale = std::min(scaleX, scaleY);
-		float scaledWidth = CLIENT_WIDTH * m_scale;
-		float scaledHeight = CLIENT_HEIGHT * m_scale;
-		m_offset.x = (physicalSize.width - scaledWidth) / 2.0f;
-		m_offset.y = (physicalSize.height - scaledHeight) / 2.0f;
+		float new_scale = std::min(scaleX, scaleY);
+		float new_logicalWidth = physicalSize.width / new_scale;
+		float new_logicalHeight = physicalSize.height / new_scale;
+		
+		if (abs(m_scale - new_scale) > 0.001f || abs(m_logicalWidth - new_logicalWidth) > 1.0f) {
+			m_scale = new_scale;
+			m_logicalWidth = new_logicalWidth;
+			m_logicalHeight = new_logicalHeight;
+			m_offset.x = 0;
+			m_offset.y = 0;
+			RecalculateBoardPositions(false);
+		}
 	}
 	void TransformMouse(float& x, float& y) {
 		x = (x - m_offset.x) / m_scale;
@@ -465,11 +514,11 @@ public:
 	int Game::GetBoardIndexFromPoint(float x, float y) {
 		float cardWidthScaled = CARD_SCALE * CARD_WIDTH;
 		float totalCardsWidth = 8.0f * cardWidthScaled;
-		float totalEmptySpace = CLIENT_WIDTH - totalCardsWidth;
+		float totalEmptySpace = m_logicalWidth - totalCardsWidth;
 		float gap = totalEmptySpace / 9.0f;
 		float sideMargin = gap;
 		float columnPitch = cardWidthScaled + gap;
-		if (x < sideMargin || x >= CLIENT_WIDTH - sideMargin) {
+		if (x < sideMargin || x >= m_logicalWidth - sideMargin) {
 			return -1;
 		}
 		int columnIndex = static_cast<int>((x - sideMargin) / columnPitch);
@@ -579,16 +628,48 @@ public:
 		d2dDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::ForestGreen));
 		D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Scale(m_scale, m_scale) * D2D1::Matrix3x2F::Translation(m_offset.x, m_offset.y);
 		d2dDeviceContext->SetTransform(transform);
+		ULONGLONG now = GetTickCount64();
 		for (int i = _countof(board) - 1; i >= 0; i--) {
 			if (board[i].active == false) {
-				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush);
+				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush, now);
 			}
 		}
 		for (int i = _countof(board) - 1; i >= 0; i--) {
 			if (board[i].active == true) {
-				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush);
+				board[i].draw(d2dDeviceContext, selectBrush, emptyBrush, now);
 			}
 		}
+
+		std::vector<Card*> waiting;
+		std::vector<Card*> flying;
+		for (auto& c : pcard) {
+			if (!c->bDrag && c->animation_start_time > 0 && now <= c->animation_start_time + ANIMATION_TIME) {
+				if (now < c->animation_start_time) {
+					waiting.push_back(c);
+				} else {
+					flying.push_back(c);
+				}
+			}
+		}
+
+		std::sort(waiting.begin(), waiting.end(), [](Card* a, Card* b) {
+			return a->animation_from_y < b->animation_from_y;
+		});
+
+		std::sort(flying.begin(), flying.end(), [](Card* a, Card* b) {
+			if (a->animation_start_time != b->animation_start_time) {
+				return a->animation_start_time < b->animation_start_time;
+			}
+			return a->y < b->y;
+		});
+
+		for (auto c : waiting) {
+			c->Draw(d2dDeviceContext, selectBrush);
+		}
+		for (auto c : flying) {
+			c->Draw(d2dDeviceContext, selectBrush);
+		}
+
 		for (auto& i : dragcard) {
 			i->Draw(d2dDeviceContext, selectBrush);
 		}
@@ -1122,6 +1203,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static ID2D1Bitmap1* bmpTarget;
 	static Game* g;
 	switch (msg) {
+	case WM_GETMINMAXINFO:
+	{
+		MINMAXINFO* pmmi = (MINMAXINFO*)lParam;
+		UINT dpi = GetDpiForWindow(hWnd);
+		RECT rect = { 0, 0, (LONG)CLIENT_WIDTH, (LONG)CLIENT_HEIGHT };
+		AdjustWindowRectExForDpi(&rect, WS_OVERLAPPEDWINDOW, TRUE, 0, dpi);
+		pmmi->ptMinTrackSize.x = rect.right - rect.left;
+		pmmi->ptMinTrackSize.y = rect.bottom - rect.top;
+		break;
+	}
 	case WM_DPICHANGED:
 	{
 		RECT* const prcNewWindow = (RECT*)lParam;
@@ -1380,7 +1471,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	RegisterClass(&wndclass);
 	UINT dpi = GetDpiForSystem(); // 最初のウィンドウはシステムのDPIに合わせる
 	RECT rect = { 0, 0, (LONG)CLIENT_WIDTH, (LONG)CLIENT_HEIGHT };
-	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
 	AdjustWindowRectExForDpi(&rect, dwStyle, TRUE, 0, dpi);
 	HWND hWnd = CreateWindow(szClassName, 0, dwStyle, CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, hInstance, 0);
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
